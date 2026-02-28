@@ -6,7 +6,7 @@ services:
   # ============================================
   postgres:
     image: postgis/postgis:15-3.3
-    container_name: agrovision-postgres
+    container_name: agrovision-postgres1
     restart: unless-stopped
     environment:
       POSTGRES_USER: agrovision_user
@@ -27,7 +27,7 @@ services:
   # ============================================
   redis:
     image: redis:7.2-alpine
-    container_name: agrovision-redis
+    container_name: agrovision-redis1
     restart: unless-stopped
     ports:
       - '6379:6379'
