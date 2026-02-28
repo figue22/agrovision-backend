@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # PostgreSQL 15 + PostGIS 3.3
+  # ============================================
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: agrovision-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: agrovision_user
+      POSTGRES_PASSWORD: agrovision_pass_2026
+      POSTGRES_DB: agrovision_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U agrovision_user -d agrovision_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis 7.2
+  # ============================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: agrovision-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
