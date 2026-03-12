@@ -1,6 +1,6 @@
+// src/config/typeorm-seed.config.ts
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
-import { join } from 'path';
 
 config({ path: `.env.${process.env.APP_ENV || 'development'}` });
 
@@ -11,8 +11,8 @@ export default new DataSource({
   username: process.env.DB_USERNAME || 'agrovision_user',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_DATABASE || 'agrovision_db',
-  entities: [join(process.cwd(), 'src/**/*.entity{.ts,.js}')],
-  migrations: [join(process.cwd(), 'src/database/migrations/*{.ts,.js}')],
+  entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+  migrations: [__dirname + '/../database/seeds/*{.ts,.js}'],
   synchronize: false,
   logging: true,
 });
