@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
-import { FarmersController } from './presentation/farmers.controller';
-import { FarmersService } from './application/use-cases/farmers.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Agricultor } from '@modules/farmers/domain/entities/agricultor.entity';
+import { FarmersController } from '@modules/farmers/presentation/farmers.controller';
+import { FarmersService } from '@modules/farmers/application/use-cases/farmers.service';
 
-/**
- * FarmersModule - Gestion de agricultores y perfiles
- */
 @Module({
-  imports: [],
+  imports: [TypeOrmModule.forFeature([Agricultor])],
   controllers: [FarmersController],
   providers: [FarmersService],
   exports: [FarmersService],

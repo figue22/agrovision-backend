@@ -1,14 +1,44 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsNumber,
   MinLength,
   Matches,
+  Min,
+  ValidateNested,
 } from 'class-validator';
-import { Rol } from '@common/enums/enums';
+import { Type } from 'class-transformer';
+
+export class DatosAgricultorDto {
+  @ApiProperty({ example: '1053845678', description: 'Cédula de ciudadanía' })
+  @IsString()
+  @IsNotEmpty({ message: 'La cédula es obligatoria' })
+  cedula: string;
+
+  @ApiPropertyOptional({ example: 'Vereda La Esperanza, Km 5' })
+  @IsOptional()
+  @IsString()
+  direccion?: string;
+
+  @ApiProperty({ example: 'Manizales' })
+  @IsString()
+  @IsNotEmpty({ message: 'El municipio es obligatorio' })
+  municipio: string;
+
+  @ApiProperty({ example: 'Caldas' })
+  @IsString()
+  @IsNotEmpty({ message: 'El departamento es obligatorio' })
+  departamento: string;
+
+  @ApiPropertyOptional({ example: 3.5, description: 'Tamaño de finca en hectáreas' })
+  @IsOptional()
+  @IsNumber({}, { message: 'El tamaño de finca debe ser un número' })
+  @Min(0, { message: 'El tamaño de finca debe ser positivo' })
+  tamano_finca_ha?: number;
+}
 
 export class RegisterDto {
   @ApiProperty({ example: 'juan.figueroa@correo.com' })
@@ -35,13 +65,17 @@ export class RegisterDto {
   @IsNotEmpty({ message: 'El apellido es obligatorio' })
   apellido: string;
 
-  @ApiProperty({ example: '+573001234567', required: false })
+  @ApiPropertyOptional({ example: '+573001234567' })
   @IsOptional()
   @IsString()
   telefono?: string;
 
-  @ApiProperty({ enum: Rol, example: Rol.AGRICULTOR, required: false })
+  @ApiPropertyOptional({
+    type: DatosAgricultorDto,
+    description: 'Datos del agricultor. Si se envía, el usuario se registra como agricultor.',
+  })
   @IsOptional()
-  @IsEnum(Rol, { message: 'El rol debe ser: admin, tecnico o agricultor' })
-  rol?: Rol;
+  @ValidateNested()
+  @Type(() => DatosAgricultorDto)
+  agricultor?: DatosAgricultorDto;
 }
