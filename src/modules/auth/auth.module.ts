@@ -1,14 +1,23 @@
 import { Module } from '@nestjs/common';
-import { AuthController } from './presentation/auth.controller';
-import { AuthService } from './application/use-cases/auth.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { ConfigModule } from '@nestjs/config';
 
-/**
- * AuthModule - Autenticacion JWT, registro, login, 2FA, roles
- */
+import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
+import { AuthService } from '@modules/auth/application/use-cases/auth.service';
+import { AuthController } from '@modules/auth/presentation/auth.controller';
+import { JwtStrategy } from '@common/strategies/jwt.strategy';
+
 @Module({
-  imports: [],
+  imports: [
+    TypeOrmModule.forFeature([Usuario]),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    JwtModule.register({}),
+    ConfigModule,
+  ],
   controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy],
+  exports: [AuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}
