@@ -1,5 +1,28 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Rol } from '@common/enums/enums';
+
+export class AgricultorResponseDto {
+  @ApiProperty()
+  agricultor_id: string;
+
+  @ApiProperty()
+  cedula: string;
+
+  @ApiPropertyOptional()
+  direccion?: string;
+
+  @ApiProperty()
+  municipio: string;
+
+  @ApiProperty()
+  departamento: string;
+
+  @ApiPropertyOptional()
+  tamano_finca_ha?: number;
+
+  @ApiProperty()
+  creado_en: Date;
+}
 
 export class UsuarioResponseDto {
   @ApiProperty()
@@ -14,7 +37,7 @@ export class UsuarioResponseDto {
   @ApiProperty()
   apellido: string;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
   telefono?: string;
 
   @ApiProperty({ enum: Rol })
@@ -26,11 +49,14 @@ export class UsuarioResponseDto {
   @ApiProperty()
   esta_activo: boolean;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional()
   ultimo_login?: Date;
 
   @ApiProperty()
   creado_en: Date;
+
+  @ApiPropertyOptional({ type: AgricultorResponseDto })
+  agricultor?: AgricultorResponseDto;
 }
 
 export class AuthResponseDto {

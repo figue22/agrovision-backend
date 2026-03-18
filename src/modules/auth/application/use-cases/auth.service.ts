@@ -5,12 +5,13 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
+import { Agricultor } from '@modules/farmers/domain/entities/agricultor.entity';
 import { RegisterDto, LoginDto, AuthResponseDto } from '@modules/auth/application/dto';
 import { AuthMapper } from '@modules/auth/application/mappers/auth.mapper';
 import { Rol } from '@common/enums/enums';
@@ -27,19 +28,31 @@ export class AuthService {
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepository: Repository<Usuario>,
+    @InjectRepository(Agricultor)
+    private readonly agricultorRepository: Repository<Agricultor>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly dataSource: DataSource,
   ) {}
 
   // ── REGISTRO ──
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
-    // Verificar si el correo ya existe
-    const existente = await this.usuarioRepository.findOne({
+    // Verificar correo duplicado
+    const existeCorreo = await this.usuarioRepository.findOne({
       where: { correo: dto.correo.toLowerCase().trim() },
     });
-
-    if (existente) {
+    if (existeCorreo) {
       throw new ConflictException('Ya existe un usuario con ese correo');
+    }
+
+    // Verificar cédula duplicada si es agricultor
+    if (dto.agricultor) {
+      const existeCedula = await this.agricultorRepository.findOne({
+        where: { cedula: dto.agricultor.cedula.trim() },
+      });
+      if (existeCedula) {
+        throw new ConflictException('Ya existe un agricultor con esa cédula');
+      }
     }
 
     // Hash de contraseña con Argon2id
@@ -50,30 +63,58 @@ export class AuthService {
       parallelism: 4,
     });
 
-    // Crear usuario
-    const usuario = this.usuarioRepository.create({
-      correo: dto.correo.toLowerCase().trim(),
-      contrasena_hash: contrasenaHash,
-      nombre: dto.nombre.trim(),
-      apellido: dto.apellido.trim(),
-      telefono: dto.telefono?.trim(),
-      rol: dto.rol || Rol.AGRICULTOR,
-    });
+    // Transacción: crear usuario + agricultor juntos
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const guardado = await this.usuarioRepository.save(usuario);
+    let usuarioGuardado: Usuario;
+    let agricultorGuardado: Agricultor | null = null;
+
+    try {
+      // Crear usuario
+      const usuario = queryRunner.manager.create(Usuario, {
+        correo: dto.correo.toLowerCase().trim(),
+        contrasena_hash: contrasenaHash,
+        nombre: dto.nombre.trim(),
+        apellido: dto.apellido.trim(),
+        telefono: dto.telefono?.trim(),
+        rol: dto.agricultor ? Rol.AGRICULTOR : Rol.TECNICO,
+      });
+      usuarioGuardado = await queryRunner.manager.save(usuario);
+
+      // Crear agricultor si se enviaron los datos
+      if (dto.agricultor) {
+        const agricultor = queryRunner.manager.create(Agricultor, {
+          usuario_id: usuarioGuardado.usuario_id,
+          cedula: dto.agricultor.cedula.trim(),
+          direccion: dto.agricultor.direccion?.trim(),
+          municipio: dto.agricultor.municipio.trim(),
+          departamento: dto.agricultor.departamento.trim(),
+          tamano_finca_ha: dto.agricultor.tamano_finca_ha,
+        });
+        agricultorGuardado = await queryRunner.manager.save(agricultor);
+      }
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
 
     // Generar tokens
-    const tokens = await this.generateTokens(guardado);
+    const tokens = await this.generateTokens(usuarioGuardado);
 
     return {
       ...tokens,
-      usuario: AuthMapper.toResponseDto(guardado),
+      usuario: AuthMapper.toResponseDto(usuarioGuardado, agricultorGuardado),
     };
   }
 
   // ── LOGIN ──
   async login(dto: LoginDto): Promise<AuthResponseDto> {
-    // Buscar usuario por correo
     const usuario = await this.usuarioRepository.findOne({
       where: { correo: dto.correo.toLowerCase().trim() },
     });
@@ -82,12 +123,10 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales incorrectas');
     }
 
-    // Verificar que esté activo
     if (!usuario.esta_activo) {
       throw new ForbiddenException('La cuenta está deshabilitada');
     }
 
-    // Verificar contraseña con Argon2id
     const contrasenaValida = await argon2.verify(
       usuario.contrasena_hash,
       dto.contrasena,
@@ -101,12 +140,19 @@ export class AuthService {
     usuario.ultimo_login = new Date();
     await this.usuarioRepository.save(usuario);
 
-    // Generar tokens
+    // Buscar datos de agricultor si existe
+    let agricultor: Agricultor | null = null;
+    if (usuario.rol === Rol.AGRICULTOR) {
+      agricultor = await this.agricultorRepository.findOne({
+        where: { usuario_id: usuario.usuario_id },
+      });
+    }
+
     const tokens = await this.generateTokens(usuario);
 
     return {
       ...tokens,
-      usuario: AuthMapper.toResponseDto(usuario),
+      usuario: AuthMapper.toResponseDto(usuario, agricultor),
     };
   }
 
@@ -129,11 +175,18 @@ export class AuthService {
         throw new UnauthorizedException('Usuario no encontrado o deshabilitado');
       }
 
+      let agricultor: Agricultor | null = null;
+      if (usuario.rol === Rol.AGRICULTOR) {
+        agricultor = await this.agricultorRepository.findOne({
+          where: { usuario_id: usuario.usuario_id },
+        });
+      }
+
       const tokens = await this.generateTokens(usuario);
 
       return {
         ...tokens,
-        usuario: AuthMapper.toResponseDto(usuario),
+        usuario: AuthMapper.toResponseDto(usuario, agricultor),
       };
     } catch {
       throw new UnauthorizedException('Refresh token inválido o expirado');
