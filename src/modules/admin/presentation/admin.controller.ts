@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Param,
   Body,
   UseGuards,
@@ -20,6 +21,7 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { Roles, Role } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
+import { CreateUserDto } from '@modules/admin/application/dto/create-user.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -74,5 +76,13 @@ export class AdminController {
     @CurrentUser() admin: Usuario,
   ) {
     return this.adminService.toggleUserStatus(dto, admin.usuario_id);
+  }
+
+  @Post('users')
+  @ApiOperation({ summary: 'Crear usuario con rol específico (solo admin)' })
+  @ApiResponse({ status: 201, description: 'Usuario creado' })
+  @ApiResponse({ status: 409, description: 'El correo ya existe' })
+  async createUser(@Body() dto: CreateUserDto) {
+    return this.adminService.createUser(dto);
   }
 }

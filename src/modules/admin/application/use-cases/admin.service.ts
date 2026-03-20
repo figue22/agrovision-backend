@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,6 +10,8 @@ import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
 import { ChangeRoleDto } from '@modules/admin/application/dto/change-role.dto';
 import { ToggleUserStatusDto } from '@modules/admin/application/dto/toggle-user-status.dto';
 import { Rol } from '@common/enums/enums';
+import { CreateUserDto } from '@modules/admin/application/dto/create-user.dto';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class AdminService {
@@ -108,5 +111,34 @@ export class AdminService {
       .getRawMany<{ rol: Rol; total: string }>();
 
     return stats.map((s) => ({ rol: s.rol, total: parseInt(s.total, 10) }));
+  }
+
+  // ── Crear nuevo usuario ──
+  async createUser(dto: CreateUserDto): Promise<Usuario> {
+  const existente = await this.usuarioRepository.findOne({
+    where: { correo: dto.correo.toLowerCase().trim() },
+  });
+
+  if (existente) {
+    throw new ConflictException('Ya existe un usuario con ese correo');
+  }
+
+  const contrasenaHash = await argon2.hash(dto.contrasena, {
+    type: argon2.argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 4,
+  });
+
+  const usuario = this.usuarioRepository.create({
+    correo: dto.correo.toLowerCase().trim(),
+    contrasena_hash: contrasenaHash,
+    nombre: dto.nombre.trim(),
+    apellido: dto.apellido.trim(),
+    telefono: dto.telefono?.trim(),
+    rol: dto.rol,
+  });
+
+  return this.usuarioRepository.save(usuario);
   }
 }
