@@ -48,19 +48,20 @@ export class FarmersController {
   @Get()
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.TECNICO)
-  @ApiOperation({ summary: 'Listar todos los agricultores (admin/técnico)' })
+  @ApiOperation({ summary: 'Listar agricultores (admin: todos, técnico: solo asignados)' })
   @ApiResponse({ status: 200, description: 'Lista de agricultores' })
-  async findAll() {
-    return this.farmersService.findAll();
+  async findAll(@CurrentUser() usuario: Usuario) {
+    return this.farmersService.findAll(usuario.usuario_id, usuario.rol);
   }
 
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.TECNICO)
-  @ApiOperation({ summary: 'Obtener agricultor por ID (admin/técnico)' })
+  @ApiOperation({ summary: 'Obtener agricultor por ID (con verificación de acceso)' })
   @ApiResponse({ status: 200, description: 'Agricultor encontrado' })
+  @ApiResponse({ status: 403, description: 'No tienes asignado a este agricultor' })
   @ApiResponse({ status: 404, description: 'Agricultor no encontrado' })
-  async findOne(@Param('id') id: string) {
-    return this.farmersService.findById(id);
+  async findOne(@Param('id') id: string, @CurrentUser() usuario: Usuario) {
+    return this.farmersService.findByIdConAcceso(id, usuario.usuario_id, usuario.rol);
   }
 }
