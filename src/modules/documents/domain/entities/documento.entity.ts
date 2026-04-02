@@ -60,11 +60,11 @@ export class Documento {
 
   // ── Relaciones ──
 
-  @ManyToOne(() => Parcela, (parcela) => parcela.documentos, { nullable: true })
+  @ManyToOne(() => Parcela, (parcela) => parcela.documentos, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'parcela_id' })
   parcela: Parcela;
 
-  @ManyToOne(() => Usuario, (usuario) => usuario.documentos, { nullable: true })
+  @ManyToOne(() => Usuario, (usuario) => usuario.documentos, { nullable: true})
   @JoinColumn({ name: 'subido_por_id' })
   subidoPor: Usuario;
 
