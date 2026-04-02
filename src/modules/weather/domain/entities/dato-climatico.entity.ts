@@ -58,7 +58,7 @@ export class DatoClimatico {
 
   // ── Relaciones ──
 
-  @ManyToOne(() => Parcela, (parcela) => parcela.datosClimaticos)
+  @ManyToOne(() => Parcela, (parcela) => parcela.datosClimaticos, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'parcela_id' })
   parcela: Parcela;
 }
