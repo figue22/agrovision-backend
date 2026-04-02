@@ -67,7 +67,7 @@ export class Prediccion {
 
   // ── Relaciones ──
 
-  @ManyToOne(() => Parcela, (parcela) => parcela.predicciones)
+  @ManyToOne(() => Parcela, (parcela) => parcela.predicciones, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'parcela_id' })
   parcela: Parcela;
 
