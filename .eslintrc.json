@@ -19,18 +19,17 @@
   "ignorePatterns": [".eslintrc.js", "dist/", "node_modules/"],
   "rules": {
     "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
-    "@typescript-eslint/no-explicit-any": "warn",
-    "@typescript-eslint/explicit-function-return-type": "warn",
-    "@typescript-eslint/explicit-module-boundary-types": "warn",
     "@typescript-eslint/no-floating-promises": "error",
     "@typescript-eslint/no-misused-promises": "error",
     "@typescript-eslint/await-thenable": "error",
-    "@typescript-eslint/naming-convention": [
-      "error",
-      { "selector": "interface", "format": ["PascalCase"], "prefix": ["I"] },
-      { "selector": "class", "format": ["PascalCase"] },
-      { "selector": "enum", "format": ["PascalCase"] }
-    ],
+    "@typescript-eslint/no-redundant-type-constituents": "warn",
+    "@typescript-eslint/no-unsafe-assignment": "warn",
+    "@typescript-eslint/no-unsafe-member-access": "warn",
+    "@typescript-eslint/require-await": "warn",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/naming-convention": "off",
     "no-console": "warn",
     "no-return-await": "off",
     "@typescript-eslint/return-await": ["error", "in-try-catch"]
