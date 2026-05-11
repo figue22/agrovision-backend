@@ -10,10 +10,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: agrovision_user
-      POSTGRES_PASSWORD: agrovision_pass_2026
+      POSTGRES_PASSWORD: postgres123
       POSTGRES_DB: agrovision_db
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
