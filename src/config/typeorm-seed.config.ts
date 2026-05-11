@@ -9,7 +9,7 @@ export default new DataSource({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
   username: process.env.DB_USERNAME || 'agrovision_user',
-  password: process.env.DB_PASSWORD || '',
+  password: process.env.DB_PASSWORD || 'agrovision_pass_2026',
   database: process.env.DB_DATABASE || 'agrovision_db',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../database/seeds/*{.ts,.js}'],
