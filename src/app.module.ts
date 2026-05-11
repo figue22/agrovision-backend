@@ -2,7 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bull';
+
+// Redis & Rate Limiting
+import { RedisModule } from '@common/redis.module';
+import { CustomThrottlerGuard } from '@common/guards/throttler.guard';
 
 // Feature modules (15)
 import { AuthModule } from '@modules/auth/auth.module';
@@ -48,7 +53,7 @@ import { AdminModule } from '@modules/admin/admin.module';
       }),
     }),
 
-    // Rate Limiting
+    // Rate Limiting — 100 req/min por usuario
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -68,10 +73,14 @@ import { AdminModule } from '@modules/admin/admin.module';
         redis: {
           host: configService.get<string>('REDIS_HOST', 'localhost'),
           port: configService.get<number>('REDIS_PORT', 6379),
-          password: configService.get<string>('REDIS_PASSWORD', ''),
+          password:
+            configService.get<string>('REDIS_PASSWORD', '') || undefined,
         },
       }),
     }),
+
+    // Redis Module (cache, sesiones, queue)
+    RedisModule,
 
     // Feature Modules (15)
     AuthModule,
@@ -89,6 +98,13 @@ import { AdminModule } from '@modules/admin/admin.module';
     CatalogsModule,
     AuditModule,
     AdminModule,
+  ],
+  providers: [
+    // ThrottlerGuard global — 100 req/min por usuario o IP
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}
