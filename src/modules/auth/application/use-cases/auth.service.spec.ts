@@ -189,6 +189,7 @@ describe('AuthService', () => {
       });
 
       expect(result).toHaveProperty('requiere_2fa', true);
+      expect(result).toHaveProperty('mensaje');
     });
   });
 
