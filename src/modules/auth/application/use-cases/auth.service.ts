@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -15,6 +16,10 @@ import { Agricultor } from '@modules/farmers/domain/entities/agricultor.entity';
 import { RegisterDto, LoginDto, AuthResponseDto } from '@modules/auth/application/dto';
 import { AuthMapper } from '@modules/auth/application/mappers/auth.mapper';
 import { Rol } from '@common/enums/enums';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const otplib = require('otplib');
+const authenticator = otplib.authenticator;
 
 interface JwtPayload {
   sub: string;
@@ -37,7 +42,6 @@ export class AuthService {
 
   // ── REGISTRO ──
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
-    // Verificar correo duplicado
     const existeCorreo = await this.usuarioRepository.findOne({
       where: { correo: dto.correo.toLowerCase().trim() },
     });
@@ -45,7 +49,6 @@ export class AuthService {
       throw new ConflictException('Ya existe un usuario con ese correo');
     }
 
-    // Verificar cédula duplicada si es agricultor
     if (dto.agricultor) {
       const existeCedula = await this.agricultorRepository.findOne({
         where: { cedula: dto.agricultor.cedula.trim() },
@@ -55,7 +58,6 @@ export class AuthService {
       }
     }
 
-    // Hash de contraseña con Argon2id
     const contrasenaHash = await argon2.hash(dto.contrasena, {
       type: argon2.argon2id,
       memoryCost: 65536,
@@ -63,7 +65,6 @@ export class AuthService {
       parallelism: 4,
     });
 
-    // Transacción: crear usuario + agricultor juntos
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -72,7 +73,6 @@ export class AuthService {
     let agricultorGuardado: Agricultor | null = null;
 
     try {
-      // Crear usuario
       const usuario = queryRunner.manager.create(Usuario, {
         correo: dto.correo.toLowerCase().trim(),
         contrasena_hash: contrasenaHash,
@@ -83,7 +83,6 @@ export class AuthService {
       });
       usuarioGuardado = await queryRunner.manager.save(usuario);
 
-      // Crear agricultor si se enviaron los datos
       if (dto.agricultor) {
         const agricultor = queryRunner.manager.create(Agricultor, {
           usuario_id: usuarioGuardado.usuario_id,
@@ -104,7 +103,6 @@ export class AuthService {
       await queryRunner.release();
     }
 
-    // Generar tokens
     const tokens = await this.generateTokens(usuarioGuardado);
 
     return {
@@ -114,7 +112,7 @@ export class AuthService {
   }
 
   // ── LOGIN ──
-  async login(dto: LoginDto): Promise<AuthResponseDto> {
+  async login(dto: LoginDto): Promise<AuthResponseDto | { requiere_2fa: true; mensaje: string }> {
     const usuario = await this.usuarioRepository.findOne({
       where: { correo: dto.correo.toLowerCase().trim() },
     });
@@ -136,11 +134,75 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales incorrectas');
     }
 
-    // Actualizar último login
+    // Si tiene 2FA, no entregar tokens aún
+    if (usuario.tiene_2fa) {
+      return {
+        requiere_2fa: true,
+        mensaje: 'Se requiere código 2FA. Usa POST /api/v1/auth/login-2fa',
+      };
+    }
+
     usuario.ultimo_login = new Date();
     await this.usuarioRepository.save(usuario);
 
-    // Buscar datos de agricultor si existe
+    let agricultor: Agricultor | null = null;
+    if (usuario.rol === Rol.AGRICULTOR) {
+      agricultor = await this.agricultorRepository.findOne({
+        where: { usuario_id: usuario.usuario_id },
+      });
+    }
+
+    const tokens = await this.generateTokens(usuario);
+
+    return {
+      ...tokens,
+      usuario: AuthMapper.toResponseDto(usuario, agricultor),
+    };
+  }
+
+  // ── LOGIN CON 2FA ──
+  async loginWith2fa(
+    correo: string,
+    contrasena: string,
+    codigo2fa: string,
+  ): Promise<AuthResponseDto> {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { correo: correo.toLowerCase().trim() },
+    });
+
+    if (!usuario) {
+      throw new UnauthorizedException('Credenciales incorrectas');
+    }
+
+    if (!usuario.esta_activo) {
+      throw new ForbiddenException('La cuenta está deshabilitada');
+    }
+
+    const contrasenaValida = await argon2.verify(
+      usuario.contrasena_hash,
+      contrasena,
+    );
+
+    if (!contrasenaValida) {
+      throw new UnauthorizedException('Credenciales incorrectas');
+    }
+
+    if (!usuario.tiene_2fa || !usuario.totp_secret) {
+      throw new BadRequestException('Este usuario no tiene 2FA habilitado');
+    }
+
+    const esValido = authenticator.verify({
+      token: codigo2fa,
+      secret: usuario.totp_secret,
+    });
+
+    if (!esValido) {
+      throw new UnauthorizedException('Código 2FA inválido');
+    }
+
+    usuario.ultimo_login = new Date();
+    await this.usuarioRepository.save(usuario);
+
     let agricultor: Agricultor | null = null;
     if (usuario.rol === Rol.AGRICULTOR) {
       agricultor = await this.agricultorRepository.findOne({

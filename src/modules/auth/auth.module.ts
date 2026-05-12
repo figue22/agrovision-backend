@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
 import { Agricultor } from '@modules/farmers/domain/entities/agricultor.entity';
 import { AuthService } from '@modules/auth/application/use-cases/auth.service';
+import { TwoFactorService } from '@modules/auth/application/use-cases/two-factor.service';
 import { AuthController } from '@modules/auth/presentation/auth.controller';
 import { JwtStrategy } from '@common/strategies/jwt.strategy';
 
@@ -18,7 +19,7 @@ import { JwtStrategy } from '@common/strategies/jwt.strategy';
     ConfigModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtStrategy, PassportModule],
+  providers: [AuthService, TwoFactorService, JwtStrategy],
+  exports: [AuthService, TwoFactorService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}
