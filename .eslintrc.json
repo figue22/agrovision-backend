@@ -33,6 +33,9 @@
     "no-console": "warn",
     "no-return-await": "off",
     "@typescript-eslint/return-await": ["error", "in-try-catch"],
-    "@typescript-eslint/no-unsafe-enum-comparison": "warn"
+    "@typescript-eslint/no-unsafe-enum-comparison": "warn",
+    "@typescript-eslint/no-unsafe-call": "warn",
+    "@typescript-eslint/no-unsafe-argument": "warn",
+    "@typescript-eslint/no-unsafe-return": "warn"
   }
 }
