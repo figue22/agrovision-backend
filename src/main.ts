@@ -13,7 +13,8 @@ async function bootstrap(): Promise<void> {
   app.use(helmet());
   app.enableCors({
     origin: [
-      'http://localhost:3000', // Next.js web
+      'http://localhost:3000',
+      /\.vercel\.app$/, // Next.js web
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
@@ -75,8 +76,8 @@ async function bootstrap(): Promise<void> {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.APP_PORT || 4000;
-  await app.listen(port);
+  const port = process.env.PORT || process.env.APP_PORT || 4000;
+  await app.listen(port, '0.0.0.0');
 
   const logger = new Logger('Bootstrap');
   logger.log(`AgroVision API running on http://localhost:${port}`);
