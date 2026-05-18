@@ -19,7 +19,6 @@ import { Rol } from '@common/enums/enums';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const otplib = require('otplib');
-const authenticator = otplib.authenticator;
 
 interface JwtPayload {
   sub: string;
@@ -40,7 +39,6 @@ export class AuthService {
     private readonly dataSource: DataSource,
   ) {}
 
-  // ── REGISTRO ──
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
     const existeCorreo = await this.usuarioRepository.findOne({
       where: { correo: dto.correo.toLowerCase().trim() },
@@ -111,7 +109,6 @@ export class AuthService {
     };
   }
 
-  // ── LOGIN ──
   async login(dto: LoginDto): Promise<AuthResponseDto | { requiere_2fa: true; mensaje: string }> {
     const usuario = await this.usuarioRepository.findOne({
       where: { correo: dto.correo.toLowerCase().trim() },
@@ -134,7 +131,6 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales incorrectas');
     }
 
-    // Si tiene 2FA, no entregar tokens aún
     if (usuario.tiene_2fa) {
       return {
         requiere_2fa: true,
@@ -160,7 +156,6 @@ export class AuthService {
     };
   }
 
-  // ── LOGIN CON 2FA ──
   async loginWith2fa(
     correo: string,
     contrasena: string,
@@ -191,12 +186,12 @@ export class AuthService {
       throw new BadRequestException('Este usuario no tiene 2FA habilitado');
     }
 
-    const esValido = authenticator.verify({
+    const resultado = otplib.verifySync({
       token: codigo2fa,
       secret: usuario.totp_secret,
     });
 
-    if (!esValido) {
+    if (!resultado.valid) {
       throw new UnauthorizedException('Código 2FA inválido');
     }
 
@@ -218,7 +213,6 @@ export class AuthService {
     };
   }
 
-  // ── REFRESH TOKEN ──
   async refreshToken(refreshToken: string): Promise<AuthResponseDto> {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
@@ -255,7 +249,6 @@ export class AuthService {
     }
   }
 
-  // ── OBTENER PERFIL ──
   async getProfile(usuarioId: string): Promise<Usuario> {
     const usuario = await this.usuarioRepository.findOne({
       where: { usuario_id: usuarioId },
@@ -268,7 +261,6 @@ export class AuthService {
     return usuario;
   }
 
-  // ── GENERAR TOKENS ──
   private async generateTokens(
     usuario: Usuario,
   ): Promise<{ access_token: string; refresh_token: string }> {
