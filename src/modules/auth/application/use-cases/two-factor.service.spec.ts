@@ -14,11 +14,9 @@ jest.mock('qrcode', () => ({
 }));
 
 jest.mock('otplib', () => ({
-  authenticator: {
-    generateSecret: jest.fn().mockReturnValue('MOCK_SECRET_123'),
-    keyuri: jest.fn().mockReturnValue('otpauth://totp/AgroVision:test@test.com?secret=MOCK'),
-    verify: jest.fn(),
-  },
+  generateSecret: jest.fn().mockReturnValue('MOCK_SECRET_123'),
+  generateURI: jest.fn().mockReturnValue('otpauth://totp/AgroVision:test@test.com?secret=MOCK'),
+  verifySync: jest.fn(),
 }));
 
 const otplib = require('otplib');
@@ -96,7 +94,7 @@ describe('TwoFactorService', () => {
         ...mockUsuario,
         totp_secret: 'MOCK_SECRET',
       });
-      otplib.authenticator.verify.mockReturnValue(true);
+      otplib.verifySync.mockReturnValue({ valid: true });
 
       const result = await service.verify('uuid-user-1', '123456');
 
@@ -108,7 +106,7 @@ describe('TwoFactorService', () => {
         ...mockUsuario,
         totp_secret: 'MOCK_SECRET',
       });
-      otplib.authenticator.verify.mockReturnValue(false);
+      otplib.verifySync.mockReturnValue({ valid: false });
 
       await expect(
         service.verify('uuid-user-1', '000000'),
@@ -134,7 +132,7 @@ describe('TwoFactorService', () => {
         tiene_2fa: true,
         totp_secret: 'MOCK_SECRET',
       });
-      otplib.authenticator.verify.mockReturnValue(true);
+      otplib.verifySync.mockReturnValue({ valid: true });
 
       const result = await service.disable('uuid-user-1', '123456');
 

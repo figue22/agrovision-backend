@@ -13,7 +13,6 @@ import { Enable2faResponseDto } from '@modules/auth/application/dto/two-factor.d
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const otplib = require('otplib');
-const authenticator = otplib.authenticator;
 
 @Injectable()
 export class TwoFactorService {
@@ -31,12 +30,12 @@ export class TwoFactorService {
       throw new BadRequestException('2FA ya está habilitado. Desactívalo primero.');
     }
 
-    const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(
-      usuario.correo,
-      this.APP_NAME,
+    const secret = otplib.generateSecret();
+    const otpauthUrl = otplib.generateURI({
+      issuer: this.APP_NAME,
+      label: usuario.correo,
       secret,
-    );
+    });
 
     usuario.totp_secret = secret;
     await this.usuarioRepo.save(usuario);
@@ -61,12 +60,12 @@ export class TwoFactorService {
       throw new BadRequestException('2FA ya está activo');
     }
 
-    const esValido = authenticator.verify({
+    const resultado = otplib.verifySync({
       token: codigo,
       secret: usuario.totp_secret,
     });
 
-    if (!esValido) {
+    if (!resultado.valid) {
       throw new UnauthorizedException('Código 2FA inválido');
     }
 
@@ -83,12 +82,12 @@ export class TwoFactorService {
       throw new BadRequestException('2FA no está habilitado');
     }
 
-    const esValido = authenticator.verify({
+    const resultado = otplib.verifySync({
       token: codigo,
       secret: usuario.totp_secret,
     });
 
-    if (!esValido) {
+    if (!resultado.valid) {
       throw new UnauthorizedException('Código 2FA inválido');
     }
 
@@ -106,10 +105,12 @@ export class TwoFactorService {
       throw new ForbiddenException('2FA no está configurado');
     }
 
-    return authenticator.verify({
+    const resultado = otplib.verifySync({
       token: codigo,
       secret: usuario.totp_secret,
     });
+
+    return resultado.valid;
   }
 
   async getStatus(usuarioId: string): Promise<{ tiene_2fa: boolean }> {
