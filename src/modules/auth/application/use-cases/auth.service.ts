@@ -186,13 +186,27 @@ export class AuthService {
       throw new BadRequestException('Este usuario no tiene 2FA habilitado');
     }
 
+    // Intentar TOTP
     const resultado = otplib.verifySync({
       token: codigo2fa,
       secret: usuario.totp_secret,
     });
 
     if (!resultado.valid) {
-      throw new UnauthorizedException('Código 2FA inválido');
+      // Intentar backup code
+      if (!usuario.backup_codes || usuario.backup_codes.length === 0) {
+        throw new UnauthorizedException('Código 2FA inválido');
+      }
+
+      const codeUpper = codigo2fa.toUpperCase();
+      const index = usuario.backup_codes.indexOf(codeUpper);
+
+      if (index === -1) {
+        throw new UnauthorizedException('Código 2FA inválido');
+      }
+
+      // Consumir backup code (un solo uso)
+      usuario.backup_codes.splice(index, 1);
     }
 
     usuario.ultimo_login = new Date();
