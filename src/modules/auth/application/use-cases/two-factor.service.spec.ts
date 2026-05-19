@@ -98,7 +98,8 @@ describe('TwoFactorService', () => {
 
       const result = await service.verify('uuid-user-1', '123456');
 
-      expect(result.mensaje).toBe('2FA activado correctamente');
+      expect(result.mensaje).toContain('2FA activado correctamente');
+      expect(result.backup_codes).toHaveLength(8);
     });
 
     it('debe lanzar error con código inválido', async () => {
@@ -156,7 +157,7 @@ describe('TwoFactorService', () => {
       mockUsuarioRepo.findOne.mockResolvedValue({ ...mockUsuario });
 
       const result = await service.getStatus('uuid-user-1');
-      expect(result).toEqual({ tiene_2fa: false });
+      expect(result).toEqual({ tiene_2fa: false, backup_codes_remaining: 0 });
     });
   });
 });

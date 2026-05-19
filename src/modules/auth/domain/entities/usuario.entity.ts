@@ -43,6 +43,9 @@ export class Usuario {
   @Column({ type: 'varchar', length: 255, nullable: true })
   totp_secret: string;
 
+  @Column({ type: 'simple-array', nullable: true })
+  backup_codes: string[];
+
   @Column({ type: 'boolean', default: false })
   tiene_2fa: boolean;
 
