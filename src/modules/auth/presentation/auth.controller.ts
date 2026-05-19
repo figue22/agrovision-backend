@@ -128,4 +128,17 @@ export class AuthController {
   async get2faStatus(@CurrentUser() usuario: Usuario) {
     return this.twoFactorService.getStatus(usuario.usuario_id);
   }
+
+  @Post('2fa/regenerate-backup')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Regenerar códigos de respaldo (requiere código TOTP actual)' })
+  @ApiResponse({ status: 200, description: 'Nuevos códigos generados' })
+  async regenerateBackupCodes(
+    @CurrentUser() usuario: Usuario,
+    @Body() dto: Verify2faDto,
+  ) {
+    return this.twoFactorService.regenerateBackupCodes(usuario.usuario_id, dto.codigo);
+  }
 }
