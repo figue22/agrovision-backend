@@ -19,7 +19,7 @@ export class WeatherService {
         private readonly parcelaRepo: Repository<Parcela>,
     ) { }
 
-    private async verificarAccesoParcela(parcelaId: string, usuarioId: string, rol: string): Promise<void> {
+    public async verificarAcceso(parcelaId: string, usuarioId: string, rol: string): Promise<void> {
         const parcela = await this.parcelaRepo.findOne({
             where: { parcela_id: parcelaId },
             relations: ['agricultor'],
@@ -37,17 +37,26 @@ export class WeatherService {
         return this.datoClimaticoRepo.save(dato);
     }
 
-    async findByParcela(parcelaId: string, usuarioId: string, rol: string, limit = 30): Promise<DatoClimatico[]> {
-        await this.verificarAccesoParcela(parcelaId, usuarioId, rol);
-        return this.datoClimaticoRepo.find({
-            where: { parcela_id: parcelaId },
-            order: { fecha: 'DESC' },
-            take: limit,
-        });
+    async findByParcela(
+        parcelaId: string,
+        usuarioId: string,
+        rol: string,
+        limit = 30,
+    ): Promise<DatoClimatico[]> {
+    await this.verificarAcceso(parcelaId, usuarioId, rol);
+
+    return this.datoClimaticoRepo.find({
+        where: [
+        { parcela_id: parcelaId, fuente: 'openweathermap' },
+        { parcela_id: parcelaId, fuente: 'ideam' },
+        ],
+        order: { fecha: 'DESC' },
+        take: limit,
+    });
     }
 
     async findByDateRange(parcelaId: string, fechaInicio: string, fechaFin: string, usuarioId: string, rol: string): Promise<DatoClimatico[]> {
-        await this.verificarAccesoParcela(parcelaId, usuarioId, rol);
+        await this.verificarAcceso(parcelaId, usuarioId, rol);
         return this.datoClimaticoRepo.find({
             where: { parcela_id: parcelaId, fecha: Between(new Date(fechaInicio), new Date(fechaFin)) },
             order: { fecha: 'ASC' },
@@ -60,7 +69,7 @@ export class WeatherService {
             relations: ['parcela'],
         });
         if (!dato) throw new NotFoundException('Dato climático no encontrado');
-        await this.verificarAccesoParcela(dato.parcela_id, usuarioId, rol);
+        await this.verificarAcceso(dato.parcela_id, usuarioId, rol);
         return dato;
     }
 
@@ -75,13 +84,24 @@ export class WeatherService {
         await this.datoClimaticoRepo.remove(dato);
     }
 
-    async getUltimo(parcelaId: string, usuarioId: string, rol: string): Promise<DatoClimatico | null> {
-        await this.verificarAccesoParcela(parcelaId, usuarioId, rol);
-        return this.datoClimaticoRepo.findOne({ where: { parcela_id: parcelaId }, order: { fecha: 'DESC' } });
+    async getUltimo(
+        parcelaId: string,
+        usuarioId: string,
+        rol: string,
+    ): Promise<DatoClimatico | null> {
+        await this.verificarAcceso(parcelaId, usuarioId, rol);
+
+        return this.datoClimaticoRepo.findOne({
+            where: { 
+            parcela_id: parcelaId,
+            fuente: 'openweathermap',
+            },
+            order: { fecha: 'DESC' },
+        });
     }
 
     async getPromedios(parcelaId: string, fechaInicio: string, fechaFin: string, usuarioId: string, rol: string) {
-        await this.verificarAccesoParcela(parcelaId, usuarioId, rol);
+        await this.verificarAcceso(parcelaId, usuarioId, rol);
         const datos = await this.datoClimaticoRepo.find({
             where: { parcela_id: parcelaId, fecha: Between(new Date(fechaInicio), new Date(fechaFin)) },
         });
