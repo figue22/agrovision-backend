@@ -6,6 +6,7 @@ import {
   ApiTags, ApiOperation, ApiBearerAuth, ApiQuery,
 } from '@nestjs/swagger';
 import { WeatherService } from '@modules/weather/application/use-cases/weather.service';
+import { OpenWeatherMapService } from '@modules/weather/application/use-cases/openweathermap.service';
 import { CreateDatoClimaticoDto } from '@modules/weather/application/dto/create-dato-climatico.dto';
 import { UpdateDatoClimaticoDto } from '@modules/weather/application/dto/update-dato-climatico.dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
@@ -19,12 +20,39 @@ import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class WeatherController {
-  constructor(private readonly weatherService: WeatherService) { }
+  constructor(
+    private readonly weatherService: WeatherService,
+    private readonly owmService: OpenWeatherMapService,
+  ) {}
+
+  // ── OpenWeatherMap Integration ──
+
+  @Get('parcela/:parcelaId/fetch')
+  @ApiOperation({ summary: 'Obtener clima actual de OpenWeatherMap (cache 6h)' })
+  async fetchCurrent(@Param('parcelaId') parcelaId: string) {
+    return this.owmService.fetchCurrentWeather(parcelaId);
+  }
+
+  @Get('parcela/:parcelaId/forecast')
+  @ApiOperation({ summary: 'Obtener pronóstico 5 días de OpenWeatherMap (cache 6h)' })
+  async fetchForecast(@Param('parcelaId') parcelaId: string) {
+    return this.owmService.fetchForecast(parcelaId);
+  }
+
+  @Post('fetch-all')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.TECNICO)
+  @ApiOperation({ summary: 'Actualizar clima de todas las parcelas (admin/técnico)' })
+  async fetchAllParcelas() {
+    return this.owmService.fetchAllParcelas();
+  }
+
+  // ── CRUD Existente ──
 
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.TECNICO)
-  @ApiOperation({ summary: 'Registrar dato climático (admin/técnico)' })
+  @ApiOperation({ summary: 'Registrar dato climático manual (admin/técnico)' })
   async create(@Body() dto: CreateDatoClimaticoDto) {
     return this.weatherService.create(dto);
   }
