@@ -14,7 +14,7 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { Roles, Role } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
-
+import { IdeamService } from '@modules/weather/application/use-cases/ideam.service';
 @ApiTags('Weather')
 @Controller('weather')
 @UseGuards(JwtAuthGuard)
@@ -23,6 +23,8 @@ export class WeatherController {
   constructor(
     private readonly weatherService: WeatherService,
     private readonly owmService: OpenWeatherMapService,
+    private readonly ideamService: IdeamService
+    
   ) {}
 
   // ── OpenWeatherMap Integration ──
@@ -45,6 +47,21 @@ export class WeatherController {
   @ApiOperation({ summary: 'Actualizar clima de todas las parcelas (admin/técnico)' })
   async fetchAllParcelas() {
     return this.owmService.fetchAllParcelas();
+  }
+
+  // ── IDEAM Integration ──
+  // Este endpoint obtiene datos históricos del IDEAM para la parcela, buscando la estación más cercana y retornando promedios diarios en el rango solicitado. Se cachea por 24 horas ya que los datos históricos no cambian.
+
+  @Get('parcela/:parcelaId/ideam')
+  @ApiOperation({ summary: 'Obtener datos históricos IDEAM (estación más cercana, cache 24h)' })
+  @ApiQuery({ name: 'desde', example: '2026-01-01' })
+  @ApiQuery({ name: 'hasta', example: '2026-04-30' })
+  async fetchIdeam(
+    @Param('parcelaId') parcelaId: string,
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
+  ) {
+    return this.ideamService.fetchHistorico(parcelaId, desde, hasta);
   }
 
   // ── CRUD Existente ──
