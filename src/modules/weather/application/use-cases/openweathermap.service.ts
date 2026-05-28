@@ -65,7 +65,13 @@ export class OpenWeatherMapService {
 
   // ── Clima actual de una parcela ──
   async fetchCurrentWeather(parcelaId: string): Promise<DatoClimatico> {
-    const cacheKey = `weather:current:${parcelaId}`;
+    // Fecha actual en zona horaria Colombia (UTC-5)
+    const ahora = new Date();
+    const colombiaOffset = -5 * 60;
+    const colombiaTime = new Date(ahora.getTime() + (colombiaOffset - ahora.getTimezoneOffset()) * 60000);
+    const hoy = colombiaTime.toISOString().split('T')[0];
+    const fechaHoy = new Date(`${hoy}T12:00:00.000Z`);
+    const cacheKey = `weather:current:${parcelaId}:${hoy}`;
 
     const cached = await this.cache.get<DatoClimatico>(cacheKey);
     if (cached) {
@@ -98,17 +104,18 @@ export class OpenWeatherMapService {
     }
 
     const precipitacion = data.rain?.['1h'] ?? data.rain?.['3h'] ?? 0;
-    const hoy = new Date().toISOString().split('T')[0];
+    
 
     const datoData = {
       parcela_id: parcelaId,
-      fecha: new Date(hoy),
+      fecha: fechaHoy,
       temp_maxima: Math.round(data.main.temp_max * 100) / 100,
       temp_minima: Math.round(data.main.temp_min * 100) / 100,
       temp_promedio: Math.round(data.main.temp * 100) / 100,
       humedad_pct: data.main.humidity,
       velocidad_viento: Math.round(data.wind.speed * 100) / 100,
       cobertura_nubes_pct: data.clouds.all,
+      presion_atm: data.main.pressure,
       precipitacion_mm: precipitacion,
       indice_uv: indiceUv,
       fuente: 'openweathermap',
@@ -116,7 +123,7 @@ export class OpenWeatherMapService {
     };
 
     const existente = await this.datoClimaticoRepo.findOne({
-      where: { parcela_id: parcelaId, fecha: new Date(hoy), fuente: 'openweathermap' },
+      where: { parcela_id: parcelaId, fecha: fechaHoy, fuente: 'openweathermap' },
     });
 
     let resultado: DatoClimatico;
@@ -137,7 +144,11 @@ export class OpenWeatherMapService {
 
   // ── Pronóstico 5 días de una parcela ──
   async fetchForecast(parcelaId: string): Promise<DatoClimatico[]> {
-    const cacheKey = `weather:forecast:${parcelaId}`;
+    const ahora = new Date();
+    const colombiaOffset = -5 * 60;
+    const colombiaTime = new Date(ahora.getTime() + (colombiaOffset - ahora.getTimezoneOffset()) * 60000);
+    const hoy = colombiaTime.toISOString().split('T')[0];
+    const cacheKey = `weather:forecast:${parcelaId}:${hoy}`;
 
     const cached = await this.cache.get<DatoClimatico[]>(cacheKey);
     if (cached) {
@@ -163,6 +174,7 @@ export class OpenWeatherMapService {
     const resultados: DatoClimatico[] = [];
 
     for (const [fecha, items] of porDia) {
+      const fechaDia = new Date(`${fecha}T12:00:00.000Z`);
       const tempMax = Math.max(...items.map((i) => i.main.temp_max));
       const tempMin = Math.min(...items.map((i) => i.main.temp_min));
       const tempProm = items.reduce((s, i) => s + i.main.temp, 0) / items.length;
@@ -170,10 +182,11 @@ export class OpenWeatherMapService {
       const vientoProm = items.reduce((s, i) => s + i.wind.speed, 0) / items.length;
       const nubesProm = items.reduce((s, i) => s + i.clouds.all, 0) / items.length;
       const lluviaTotal = items.reduce((s, i) => s + (i.rain?.['3h'] ?? 0), 0);
+      const probLluviaProm = items.reduce((s, i) => s + (i.pop || 0), 0) / items.length;
 
       const datoData = {
         parcela_id: parcelaId,
-        fecha: new Date(fecha),
+        fecha: fechaDia,
         temp_maxima: Math.round(tempMax * 100) / 100,
         temp_minima: Math.round(tempMin * 100) / 100,
         temp_promedio: Math.round(tempProm * 100) / 100,
@@ -183,11 +196,11 @@ export class OpenWeatherMapService {
         cobertura_nubes_pct: Math.round(nubesProm * 100) / 100,
         indice_uv: undefined,
         fuente: 'openweathermap_forecast',
-        datos_crudos: { items_count: items.length, fecha } as object,
+        datos_crudos: { items_count: items.length, fecha, prob_lluvia_pct: Math.round(probLluviaProm * 100), } as object,
       };
 
       const existente = await this.datoClimaticoRepo.findOne({
-        where: { parcela_id: parcelaId, fecha: new Date(fecha), fuente: 'openweathermap_forecast' },
+        where: { parcela_id: parcelaId, fecha: fechaDia, fuente: 'openweathermap_forecast' },
       });
 
       let resultado: DatoClimatico;

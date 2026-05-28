@@ -1,28 +1,13 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-  HttpCode,
-  HttpStatus,
+  Controller, Get, Post, Put, Delete, Body, Param, Query,
+  UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiQuery,
+  ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery,
 } from '@nestjs/swagger';
 import { ParcelsService } from '@modules/parcels/application/use-cases/parcels.service';
 import {
-  CreateParcelaDto,
-  UpdateParcelaDto,
-  ParcelaResponseDto,
+  CreateParcelaDto, UpdateParcelaDto, ParcelaResponseDto,
 } from '@modules/parcels/application/dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
@@ -41,8 +26,7 @@ export class ParcelsController {
   @Roles(Role.AGRICULTOR)
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Crear nueva parcela (solo agricultor)' })
-  @ApiResponse({ status: 201, description: 'Parcela creada', type: ParcelaResponseDto })
-  @ApiResponse({ status: 403, description: 'Solo los agricultores pueden crear parcelas' })
+  @ApiResponse({ status: 201, type: ParcelaResponseDto })
   async create(
     @CurrentUser() usuario: Usuario,
     @Body() dto: CreateParcelaDto,
@@ -54,7 +38,6 @@ export class ParcelsController {
   @Roles(Role.AGRICULTOR)
   @UseGuards(RolesGuard)
   @ApiOperation({ summary: 'Listar mis parcelas (solo agricultor)' })
-  @ApiResponse({ status: 200, description: 'Lista de parcelas del agricultor', type: [ParcelaResponseDto] })
   async findMyParcelas(@CurrentUser() usuario: Usuario): Promise<ParcelaResponseDto[]> {
     return this.parcelsService.findMyParcelas(usuario.usuario_id);
   }
@@ -62,33 +45,28 @@ export class ParcelsController {
   @Get()
   @Roles(Role.ADMIN, Role.TECNICO)
   @UseGuards(RolesGuard)
-  @ApiOperation({ summary: 'Listar todas las parcelas (admin: todas, técnico: de sus asignados)' })
-  @ApiResponse({ status: 200, description: 'Lista de parcelas', type: [ParcelaResponseDto] })
+  @ApiOperation({ summary: 'Listar todas las parcelas (admin/técnico)' })
   async findAll(@CurrentUser() usuario: Usuario): Promise<ParcelaResponseDto[]> {
     return this.parcelsService.findAll(usuario.usuario_id, usuario.rol);
   }
 
   @Get('nearby')
-  @ApiOperation({ summary: 'Buscar parcelas cercanas a una coordenada (PostGIS)' })
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.TECNICO)
+  @ApiOperation({ summary: 'Buscar parcelas cercanas (PostGIS) — solo admin/técnico' })
   @ApiQuery({ name: 'lat', type: Number, example: 5.0689 })
   @ApiQuery({ name: 'lng', type: Number, example: -75.5174 })
   @ApiQuery({ name: 'radio_km', type: Number, example: 10, required: false })
-  @ApiResponse({ status: 200, description: 'Parcelas dentro del radio', type: [ParcelaResponseDto] })
   async findNearby(
     @Query('lat') lat: number,
     @Query('lng') lng: number,
     @Query('radio_km') radioKm?: number,
   ): Promise<ParcelaResponseDto[]> {
-    return this.parcelsService.findNearby(
-      Number(lat),
-      Number(lng),
-      Number(radioKm) || 10,
-    );
+    return this.parcelsService.findNearby(Number(lat), Number(lng), Number(radioKm) || 10);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener parcela por ID (con verificación de acceso)' })
-  @ApiResponse({ status: 200, description: 'Parcela encontrada', type: ParcelaResponseDto })
   @ApiResponse({ status: 403, description: 'No tienes acceso a esta parcela' })
   @ApiResponse({ status: 404, description: 'Parcela no encontrada' })
   async findOne(
@@ -99,8 +77,9 @@ export class ParcelsController {
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Actualizar parcela (solo propietario o admin)' })
-  @ApiResponse({ status: 200, description: 'Parcela actualizada', type: ParcelaResponseDto })
+  @UseGuards(RolesGuard)
+  @Roles(Role.AGRICULTOR, Role.ADMIN)
+  @ApiOperation({ summary: 'Actualizar parcela (agricultor propietario o admin)' })
   @ApiResponse({ status: 403, description: 'Solo puedes modificar tus propias parcelas' })
   @ApiResponse({ status: 404, description: 'Parcela no encontrada' })
   async update(
@@ -112,11 +91,11 @@ export class ParcelsController {
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(Role.AGRICULTOR, Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar parcela (solo propietario o admin)' })
-  @ApiResponse({ status: 204, description: 'Parcela eliminada' })
+  @ApiOperation({ summary: 'Eliminar parcela (agricultor propietario o admin)' })
   @ApiResponse({ status: 403, description: 'Solo puedes eliminar tus propias parcelas' })
-  @ApiResponse({ status: 404, description: 'Parcela no encontrada' })
   async remove(
     @Param('id') id: string,
     @CurrentUser() usuario: Usuario,

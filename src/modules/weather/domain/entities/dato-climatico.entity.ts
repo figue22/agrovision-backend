@@ -47,6 +47,9 @@ export class DatoClimatico {
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
   cobertura_nubes_pct: number;
 
+  @Column({ type: 'decimal', precision: 7, scale: 2, nullable: true })
+  presion_atm: number;
+
   @Column({ type: 'varchar', length: 50 })
   fuente: string;
 
