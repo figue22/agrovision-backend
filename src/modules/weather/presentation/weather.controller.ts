@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { WeatherService } from '@modules/weather/application/use-cases/weather.service';
 import { OpenWeatherMapService } from '@modules/weather/application/use-cases/openweathermap.service';
+import { IdeamService } from '@modules/weather/application/use-cases/ideam.service';
 import { CreateDatoClimaticoDto } from '@modules/weather/application/dto/create-dato-climatico.dto';
 import { UpdateDatoClimaticoDto } from '@modules/weather/application/dto/update-dato-climatico.dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
@@ -14,7 +15,7 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { Roles, Role } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
-import { IdeamService } from '@modules/weather/application/use-cases/ideam.service';
+
 @ApiTags('Weather')
 @Controller('weather')
 @UseGuards(JwtAuthGuard)
@@ -23,21 +24,28 @@ export class WeatherController {
   constructor(
     private readonly weatherService: WeatherService,
     private readonly owmService: OpenWeatherMapService,
-    private readonly ideamService: IdeamService
-    
+    private readonly ideamService: IdeamService,
   ) {}
 
   // ── OpenWeatherMap Integration ──
 
   @Get('parcela/:parcelaId/fetch')
   @ApiOperation({ summary: 'Obtener clima actual de OpenWeatherMap (cache 6h)' })
-  async fetchCurrent(@Param('parcelaId') parcelaId: string) {
+  async fetchCurrent(
+    @Param('parcelaId') parcelaId: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    await this.weatherService.verificarAcceso(parcelaId, usuario.usuario_id, usuario.rol);
     return this.owmService.fetchCurrentWeather(parcelaId);
   }
 
   @Get('parcela/:parcelaId/forecast')
   @ApiOperation({ summary: 'Obtener pronóstico 5 días de OpenWeatherMap (cache 6h)' })
-  async fetchForecast(@Param('parcelaId') parcelaId: string) {
+  async fetchForecast(
+    @Param('parcelaId') parcelaId: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    await this.weatherService.verificarAcceso(parcelaId, usuario.usuario_id, usuario.rol);
     return this.owmService.fetchForecast(parcelaId);
   }
 
@@ -49,9 +57,6 @@ export class WeatherController {
     return this.owmService.fetchAllParcelas();
   }
 
-  // ── IDEAM Integration ──
-  // Este endpoint obtiene datos históricos del IDEAM para la parcela, buscando la estación más cercana y retornando promedios diarios en el rango solicitado. Se cachea por 24 horas ya que los datos históricos no cambian.
-
   @Get('parcela/:parcelaId/ideam')
   @ApiOperation({ summary: 'Obtener datos históricos IDEAM (estación más cercana, cache 24h)' })
   @ApiQuery({ name: 'desde', example: '2026-01-01' })
@@ -60,7 +65,9 @@ export class WeatherController {
     @Param('parcelaId') parcelaId: string,
     @Query('desde') desde: string,
     @Query('hasta') hasta: string,
+    @CurrentUser() usuario: Usuario,
   ) {
+    await this.weatherService.verificarAcceso(parcelaId, usuario.usuario_id, usuario.rol);
     return this.ideamService.fetchHistorico(parcelaId, desde, hasta);
   }
 
@@ -91,7 +98,8 @@ export class WeatherController {
   @ApiQuery({ name: 'hasta', example: '2026-04-30' })
   async findByDateRange(
     @Param('parcelaId') parcelaId: string,
-    @Query('desde') desde: string, @Query('hasta') hasta: string,
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
     @CurrentUser() usuario: Usuario,
   ) {
     return this.weatherService.findByDateRange(parcelaId, desde, hasta, usuario.usuario_id, usuario.rol);
@@ -99,7 +107,10 @@ export class WeatherController {
 
   @Get('parcela/:parcelaId/ultimo')
   @ApiOperation({ summary: 'Último dato climático' })
-  async getUltimo(@Param('parcelaId') parcelaId: string, @CurrentUser() usuario: Usuario) {
+  async getUltimo(
+    @Param('parcelaId') parcelaId: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
     return this.weatherService.getUltimo(parcelaId, usuario.usuario_id, usuario.rol);
   }
 
@@ -109,7 +120,8 @@ export class WeatherController {
   @ApiQuery({ name: 'hasta', example: '2026-04-30' })
   async getPromedios(
     @Param('parcelaId') parcelaId: string,
-    @Query('desde') desde: string, @Query('hasta') hasta: string,
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
     @CurrentUser() usuario: Usuario,
   ) {
     return this.weatherService.getPromedios(parcelaId, desde, hasta, usuario.usuario_id, usuario.rol);
@@ -125,7 +137,11 @@ export class WeatherController {
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN, Role.TECNICO)
   @ApiOperation({ summary: 'Actualizar dato climático (admin/técnico)' })
-  async update(@Param('id') id: string, @CurrentUser() usuario: Usuario, @Body() dto: UpdateDatoClimaticoDto) {
+  async update(
+    @Param('id') id: string,
+    @CurrentUser() usuario: Usuario,
+    @Body() dto: UpdateDatoClimaticoDto,
+  ) {
     return this.weatherService.update(id, usuario.usuario_id, usuario.rol, dto);
   }
 
