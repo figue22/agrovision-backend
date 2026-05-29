@@ -13,6 +13,8 @@ import { Repository } from 'typeorm';
 import { OpenWeatherMapService } from './openweathermap.service';
 import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 
+import { ClimateAlertService } from '@modules/alerts/application/use-cases/climate-alert.service';
+
 export interface WeatherJobData {
   tipo: 'fetch_all' | 'fetch_one';
   parcela_id?: string;
@@ -30,10 +32,11 @@ export class WeatherJobProcessor {
   private readonly logger = new Logger(WeatherJobProcessor.name);
 
   constructor(
-    private readonly owmService: OpenWeatherMapService,
-    @InjectRepository(Parcela)
-    private readonly parcelaRepo: Repository<Parcela>,
-  ) {}
+  private readonly owmService: OpenWeatherMapService,
+  private readonly climateAlertService: ClimateAlertService,
+  @InjectRepository(Parcela)
+  private readonly parcelaRepo: Repository<Parcela>,
+) {}
 
   @Process('fetch_all')
   async handleFetchAll(job: Job<WeatherJobData>): Promise<WeatherJobResult> {
@@ -85,6 +88,27 @@ export class WeatherJobProcessor {
     this.logger.log(
       `Job ${job.id}: completado — ${actualizadas} actualizadas, ${errores} errores, ${duracion_ms}ms`,
     );
+
+    // Evaluar alertas climáticas después de recolectar datos
+    try {
+      const alertasResult = await this.climateAlertService.evaluarTodasLasParcelas();
+      this.logger.log(
+        `Job ${job.id}: alertas evaluadas — ${alertasResult.alertas_generadas} alertas generadas`,
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Job ${job.id}: error evaluando alertas — ${msg}`);
+    }
+
+     try {
+      const recordatorios = await this.climateAlertService.evaluarRecordatorios();
+      this.logger.log(
+        `Job ${job.id}: ${recordatorios} recordatorios de cosecha generados`,
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Job ${job.id}: error evaluando recordatorios — ${msg}`);
+    }
 
     return resultado;
   }
