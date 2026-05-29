@@ -15,6 +15,7 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { Roles, Role } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
+import { WeatherSchedulerService } from '@modules/weather/application/use-cases/weather-scheduler.service';
 
 @ApiTags('Weather')
 @Controller('weather')
@@ -25,6 +26,7 @@ export class WeatherController {
     private readonly weatherService: WeatherService,
     private readonly owmService: OpenWeatherMapService,
     private readonly ideamService: IdeamService,
+    private readonly schedulerService: WeatherSchedulerService,
   ) {}
 
   // ── OpenWeatherMap Integration ──
@@ -152,5 +154,55 @@ export class WeatherController {
   @ApiOperation({ summary: 'Eliminar dato climático (solo admin)' })
   async remove(@Param('id') id: string, @CurrentUser() usuario: Usuario) {
     return this.weatherService.remove(id, usuario.usuario_id, usuario.rol);
+  }
+
+  // ── Job Admin endpoints ──
+
+  @Post('jobs/trigger')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Disparar manualmente el job de recolección de clima (solo admin)' })
+  async triggerWeatherJob() {
+    const job = await this.schedulerService.triggerFetchAll();
+    return { mensaje: 'Job iniciado', job_id: job.id };
+  }
+
+  @Post('jobs/trigger/:parcelaId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.TECNICO)
+  @ApiOperation({ summary: 'Disparar job para una parcela específica (admin/técnico)' })
+  async triggerWeatherJobOne(@Param('parcelaId') parcelaId: string) {
+    const job = await this.schedulerService.triggerFetchOne(parcelaId);
+    return { mensaje: 'Job iniciado', job_id: job.id };
+  }
+
+ @Get('jobs/stats')
+@UseGuards(RolesGuard)
+@Roles(Role.ADMIN)
+@ApiOperation({ summary: 'Estado del queue de clima (solo admin)' })
+@ApiQuery({ name: 'completadosPage', required: false })
+@ApiQuery({ name: 'fallidosPage', required: false })
+@ApiQuery({ name: 'activosPage', required: false })
+@ApiQuery({ name: 'pageSize', required: false })
+async getJobStats(
+  @Query('completadosPage') completadosPage?: number,
+  @Query('fallidosPage') fallidosPage?: number,
+  @Query('activosPage') activosPage?: number,
+  @Query('pageSize') pageSize?: number,
+) {
+  return this.schedulerService.getQueueStats(
+    Number(completadosPage) || 0,
+    Number(fallidosPage) || 0,
+    Number(activosPage) || 0,
+    Number(pageSize) || 5,
+    );
+  }
+
+  @Post('jobs/retry-failed')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Reintentar jobs fallidos (solo admin)' })
+  async retryFailedJobs() {
+    return this.schedulerService.retryFailedJobs();
   }
 }
