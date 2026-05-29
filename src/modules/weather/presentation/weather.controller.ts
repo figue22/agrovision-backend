@@ -16,6 +16,7 @@ import { Roles, Role } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
 import { WeatherSchedulerService } from '@modules/weather/application/use-cases/weather-scheduler.service';
+import { ClimateAlertService } from '@modules/alerts/application/use-cases/climate-alert.service';
 
 @ApiTags('Weather')
 @Controller('weather')
@@ -27,6 +28,7 @@ export class WeatherController {
     private readonly owmService: OpenWeatherMapService,
     private readonly ideamService: IdeamService,
     private readonly schedulerService: WeatherSchedulerService,
+    private readonly climateAlertService: ClimateAlertService,
   ) {}
 
   // ── OpenWeatherMap Integration ──
@@ -204,5 +206,33 @@ async getJobStats(
   @ApiOperation({ summary: 'Reintentar jobs fallidos (solo admin)' })
   async retryFailedJobs() {
     return this.schedulerService.retryFailedJobs();
+  }
+
+  @Post('alerts/evaluate')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.TECNICO)
+  @ApiOperation({ summary: 'Evaluar alertas climáticas manualmente (admin/técnico)' })
+  async evaluateAlerts() {
+    return this.climateAlertService.evaluarTodasLasParcelas();
+  }
+
+  @Post('alerts/evaluate/:parcelaId')
+  @ApiOperation({ summary: 'Evaluar alertas para una parcela específica' })
+  async evaluateAlertsForParcela(
+    @Param('parcelaId') parcelaId: string,
+    @CurrentUser() usuario: Usuario,
+  ) {
+    await this.weatherService.verificarAcceso(parcelaId, usuario.usuario_id, usuario.rol);
+    const alertas = await this.climateAlertService.evaluarParcela(parcelaId);
+    return { alertas_generadas: alertas };
+  }
+
+  @Post('alerts/reminders')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.TECNICO)
+  @ApiOperation({ summary: 'Evaluar recordatorios de cosecha próxima (admin/técnico)' })
+  async evaluateReminders() {
+    const creadas = await this.climateAlertService.evaluarRecordatorios();
+    return { recordatorios_generados: creadas };
   }
 }

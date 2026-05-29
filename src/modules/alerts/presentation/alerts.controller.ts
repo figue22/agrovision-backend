@@ -13,13 +13,18 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { Roles, Role } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
+import { Alerta } from '@modules/alerts/domain/entities/alerta.entity';
+import { ClimateAlertService } from '../application/use-cases/climate-alert.service';
 
 @ApiTags('Alerts')
 @Controller('alerts')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class AlertsController {
-  constructor(private readonly alertsService: AlertsService) { }
+  constructor(
+  private readonly alertsService: AlertsService,
+  private readonly climateAlertService: ClimateAlertService,
+  ) {}
 
   @Post()
   @UseGuards(RolesGuard)
@@ -95,4 +100,30 @@ export class AlertsController {
   async remove(@Param('id') id: string) {
     return this.alertsService.remove(id);
   }
+
+  @Patch(':id/unread')
+  @ApiOperation({ summary: 'Marcar alerta como no leída' })
+  async markAsUnread(
+    @Param('id') id: string,
+    @CurrentUser() usuario: Usuario,
+  ): Promise<Alerta> {
+    return this.alertsService.markAsUnread(id, usuario.usuario_id);
+  }
+
+  @Post('system')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Crear notificación del sistema para todos los usuarios (solo admin)' })
+  async createSystemNotification(
+    @Body() dto: { titulo: string; mensaje: string; usuario_ids?: string[] },
+  ) {
+    const creadas = await this.climateAlertService.crearNotificacionSistema(
+      dto.titulo,
+      dto.mensaje,
+      dto.usuario_ids,
+    );
+    return { notificaciones_creadas: creadas };
+  }
+
+  
 }
