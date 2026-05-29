@@ -102,4 +102,14 @@ export class AlertsService {
         if (!alerta) throw new NotFoundException('Alerta no encontrada');
         await this.alertaRepo.remove(alerta);
     }
+
+    async markAsUnread(alertaId: string, usuarioId: string): Promise<Alerta> {
+        const alerta = await this.alertaRepo.findOne({
+            where: { alerta_id: alertaId, usuario_id: usuarioId },
+        });
+        if (!alerta) throw new NotFoundException('Alerta no encontrada');
+        alerta.esta_leida = false;
+        alerta.fecha_lectura = undefined as unknown as Date;
+        return this.alertaRepo.save(alerta);
+    }
 }
