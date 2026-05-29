@@ -109,7 +109,7 @@ async retryFailedJobs(): Promise<{ retried: number }> {
       await job.retry();
       retried++;
     } catch (err) {
-      this.logger.warn(`No se pudo reintentar job ${job.id}: ${err}`);
+      this.logger.warn(`No se pudo reintentar job ${job.id}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   return { retried };
