@@ -88,4 +88,8 @@ export class CreateActividadDto {
     @ValidateNested({ each: true })
     @Type(() => CreateInsumoDto)
     insumos?: CreateInsumoDto[];
+
+    @IsOptional()
+    @IsUUID()
+    cultivo_parcela_id?: string;
 }

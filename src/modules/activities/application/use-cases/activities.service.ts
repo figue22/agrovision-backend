@@ -4,7 +4,7 @@ import {
     ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository} from 'typeorm';
 
 import { Actividad } from '@modules/activities/domain/entities/actividad.entity';
 import { InsumoActividad } from '@modules/activities/domain/entities/insumo-actividad.entity';
@@ -57,36 +57,35 @@ export class ActivitiesService {
         return this.actividadRepo.save(actividad);
     }
 
-    async findByParcela(parcelaId: string, usuarioId: string, rol: string): Promise<Actividad[]> {
-        await this.verificarAccesoParcela(parcelaId, usuarioId, rol);
+   async findByParcela(parcelaId: string, usuarioId: string, rol: string): Promise<Actividad[]> {
+    await this.verificarAccesoParcela(parcelaId, usuarioId, rol);
 
-        return this.actividadRepo.find({
-            where: { parcela_id: parcelaId },
-            relations: ['tipoActividad', 'insumos', 'insumos.tipoInsumo', 'realizadaPor'],
-            order: { fecha_realizacion: 'DESC' },
-        });
-    }
-
-    async findByParcelaAndDateRange(
-        parcelaId: string, fechaInicio: string, fechaFin: string, usuarioId: string, rol: string,
-    ): Promise<Actividad[]> {
-        await this.verificarAccesoParcela(parcelaId, usuarioId, rol);
-
-        return this.actividadRepo.find({
-            where: {
-                parcela_id: parcelaId,
-                fecha_realizacion: Between(new Date(fechaInicio), new Date(fechaFin)),
-            },
-            relations: ['tipoActividad', 'insumos', 'insumos.tipoInsumo'],
-            order: { fecha_realizacion: 'DESC' },
-        });
+    return this.actividadRepo
+        .createQueryBuilder('actividad')
+        .leftJoinAndSelect('actividad.tipoActividad', 'tipoActividad')
+        .leftJoinAndSelect('actividad.insumos', 'insumos')
+        .leftJoinAndSelect('insumos.tipoInsumo', 'tipoInsumo')
+        .leftJoinAndSelect('actividad.realizadaPor', 'realizadaPor')
+        .leftJoinAndSelect('actividad.parcela', 'parcela')
+        .leftJoinAndSelect('actividad.cultivoParcela', 'cultivoParcela')
+        .leftJoinAndSelect('cultivoParcela.tipoCultivo', 'tipoCultivo')
+        .where('actividad.parcela_id = :parcelaId', { parcelaId })
+        .orderBy('actividad.fecha_realizacion', 'DESC')
+        .getMany();
     }
 
     async findOne(actividadId: string, usuarioId: string, rol: string): Promise<Actividad> {
-        const actividad = await this.actividadRepo.findOne({
-            where: { actividad_id: actividadId },
-            relations: ['tipoActividad', 'insumos', 'insumos.tipoInsumo', 'realizadaPor', 'parcela'],
-        });
+        const actividad = await this.actividadRepo
+            .createQueryBuilder('actividad')
+            .leftJoinAndSelect('actividad.tipoActividad', 'tipoActividad')
+            .leftJoinAndSelect('actividad.insumos', 'insumos')
+            .leftJoinAndSelect('insumos.tipoInsumo', 'tipoInsumo')
+            .leftJoinAndSelect('actividad.realizadaPor', 'realizadaPor')
+            .leftJoinAndSelect('actividad.parcela', 'parcela')
+            .leftJoinAndSelect('actividad.cultivoParcela', 'cultivoParcela')
+            .leftJoinAndSelect('cultivoParcela.tipoCultivo', 'tipoCultivo')
+            .where('actividad.actividad_id = :actividadId', { actividadId })
+            .getOne();
 
         if (!actividad) {
             throw new NotFoundException('Actividad no encontrada');
@@ -94,6 +93,30 @@ export class ActivitiesService {
 
         await this.verificarAccesoParcela(actividad.parcela_id, usuarioId, rol);
         return actividad;
+        }
+
+    async findByParcelaAndDateRange(
+    parcelaId: string,
+    fechaInicio: string,
+    fechaFin: string,
+    usuarioId: string,
+    rol: string,
+    ): Promise<Actividad[]> {
+    await this.verificarAccesoParcela(parcelaId, usuarioId, rol);
+
+    return this.actividadRepo
+        .createQueryBuilder('actividad')
+        .leftJoinAndSelect('actividad.tipoActividad', 'tipoActividad')
+        .leftJoinAndSelect('actividad.insumos', 'insumos')
+        .leftJoinAndSelect('insumos.tipoInsumo', 'tipoInsumo')
+        .leftJoinAndSelect('actividad.realizadaPor', 'realizadaPor')
+        .leftJoinAndSelect('actividad.parcela', 'parcela')
+        .leftJoinAndSelect('actividad.cultivoParcela', 'cultivoParcela')
+        .leftJoinAndSelect('cultivoParcela.tipoCultivo', 'tipoCultivo')
+        .where('actividad.parcela_id = :parcelaId', { parcelaId })
+        .andWhere('actividad.fecha_realizacion BETWEEN :fechaInicio AND :fechaFin', { fechaInicio, fechaFin })
+        .orderBy('actividad.fecha_realizacion', 'DESC')
+        .getMany();
     }
 
     async update(actividadId: string, usuarioId: string, rol: string, dto: UpdateActividadDto): Promise<Actividad> {
