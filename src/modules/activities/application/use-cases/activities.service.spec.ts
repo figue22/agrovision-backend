@@ -9,6 +9,7 @@ import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 
 const mockParcela = {
   parcela_id: 'uuid-parcela-1',
+  nombre: 'Finca La Esperanza',
   agricultor: { usuario_id: 'uuid-user-1' },
 };
 
@@ -21,6 +22,16 @@ const mockActividad = {
   fecha_realizacion: new Date(),
   tipoActividad: { nombre: 'Fertilización' },
   insumos: [],
+  parcela: mockParcela,
+};
+
+const mockQueryBuilder = {
+  leftJoinAndSelect: jest.fn().mockReturnThis(),
+  where: jest.fn().mockReturnThis(),
+  andWhere: jest.fn().mockReturnThis(),
+  orderBy: jest.fn().mockReturnThis(),
+  getOne: jest.fn().mockResolvedValue(mockActividad),
+  getMany: jest.fn().mockResolvedValue([mockActividad]),
 };
 
 const mockActividadRepo = {
@@ -29,6 +40,7 @@ const mockActividadRepo = {
   create: jest.fn().mockImplementation((dto) => dto),
   save: jest.fn().mockImplementation((item) => ({ ...mockActividad, ...item })),
   remove: jest.fn(),
+  createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
 };
 
 const mockInsumoRepo = {
@@ -55,6 +67,11 @@ describe('ActivitiesService', () => {
 
     service = module.get<ActivitiesService>(ActivitiesService);
     jest.clearAllMocks();
+
+    // Reset queryBuilder mocks
+    mockQueryBuilder.getOne.mockResolvedValue(mockActividad);
+    mockQueryBuilder.getMany.mockResolvedValue([mockActividad]);
+    mockActividadRepo.createQueryBuilder.mockReturnValue(mockQueryBuilder);
   });
 
   it('debe estar definido', () => {
@@ -105,24 +122,33 @@ describe('ActivitiesService', () => {
   describe('findByParcela', () => {
     it('debe retornar actividades de la parcela', async () => {
       mockParcelaRepo.findOne.mockResolvedValue(mockParcela);
-      mockActividadRepo.find.mockResolvedValue([mockActividad]);
 
       const result = await service.findByParcela('uuid-parcela-1', 'uuid-user-1', 'agricultor');
       expect(result).toHaveLength(1);
+    });
+
+    it('debe lanzar ForbiddenException si agricultor no es dueño', async () => {
+      mockParcelaRepo.findOne.mockResolvedValue({
+        ...mockParcela,
+        agricultor: { usuario_id: 'uuid-otro' },
+      });
+
+      await expect(
+        service.findByParcela('uuid-parcela-1', 'uuid-user-1', 'agricultor'),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('findOne', () => {
     it('debe retornar una actividad', async () => {
-      mockActividadRepo.findOne.mockResolvedValue(mockActividad);
       mockParcelaRepo.findOne.mockResolvedValue(mockParcela);
 
-      const result = await service.findOne('uuid-act-1', 'uuid-user-1', 'agricultor');
+      const result = await service.findOne('uuid-act-1', 'uuid-user-1', 'admin');
       expect(result.actividad_id).toBe('uuid-act-1');
     });
 
     it('debe lanzar NotFoundException si no existe', async () => {
-      mockActividadRepo.findOne.mockResolvedValue(null);
+      mockQueryBuilder.getOne.mockResolvedValue(null);
 
       await expect(
         service.findOne('uuid-no', 'uuid-user-1', 'admin'),
@@ -130,9 +156,20 @@ describe('ActivitiesService', () => {
     });
   });
 
+  describe('update', () => {
+    it('debe actualizar una actividad', async () => {
+      mockParcelaRepo.findOne.mockResolvedValue(mockParcela);
+
+      await service.update('uuid-act-1', 'uuid-user-1', 'agricultor', {
+        descripcion: 'Nueva descripción',
+      } as any);
+
+      expect(mockActividadRepo.save).toHaveBeenCalled();
+    });
+  });
+
   describe('remove', () => {
     it('debe eliminar una actividad', async () => {
-      mockActividadRepo.findOne.mockResolvedValue(mockActividad);
       mockParcelaRepo.findOne.mockResolvedValue(mockParcela);
 
       await expect(

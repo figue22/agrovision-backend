@@ -12,6 +12,7 @@ import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
 import { CatTipoActividad } from '@modules/catalogs/domain/entities/cat-tipo-actividad.entity';
 import { InsumoActividad } from '@modules/activities/domain/entities/insumo-actividad.entity';
+import { CultivoParcela } from '@modules/crops/domain/entities/cultivo-parcela.entity';
 
 @Entity('actividades')
 @Index('idx_actividades_parcela_fecha', ['parcela_id', 'fecha_realizacion'])
@@ -21,6 +22,9 @@ export class Actividad {
 
   @Column({ type: 'uuid' })
   parcela_id: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  cultivo_parcela_id: string;
 
   @Column({ type: 'uuid', nullable: true })
   realizada_por_id: string;
@@ -57,6 +61,10 @@ export class Actividad {
   @ManyToOne(() => Parcela, (parcela) => parcela.actividades, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'parcela_id' })
   parcela: Parcela;
+
+  @ManyToOne(() => CultivoParcela, { nullable: true })
+  @JoinColumn({ name: 'cultivo_parcela_id' })
+  cultivoParcela: CultivoParcela;
 
   @ManyToOne(() => Usuario, (usuario) => usuario.actividades, { nullable: true })
   @JoinColumn({ name: 'realizada_por_id' })
