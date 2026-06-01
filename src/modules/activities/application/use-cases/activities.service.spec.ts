@@ -29,6 +29,14 @@ const mockActividadRepo = {
   create: jest.fn().mockImplementation((dto) => dto),
   save: jest.fn().mockImplementation((item) => ({ ...mockActividad, ...item })),
   remove: jest.fn(),
+  createQueryBuilder: jest.fn().mockReturnValue({
+  leftJoinAndSelect: jest.fn().mockReturnThis(),
+  where: jest.fn().mockReturnThis(),
+  andWhere: jest.fn().mockReturnThis(),
+  orderBy: jest.fn().mockReturnThis(),
+  getOne: jest.fn().mockResolvedValue(mockActividad),
+  getMany: jest.fn().mockResolvedValue([mockActividad]),
+  }),
 };
 
 const mockInsumoRepo = {
