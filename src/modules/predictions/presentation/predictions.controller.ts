@@ -26,8 +26,8 @@ export class PredictionsController {
   @Roles(Role.ADMIN, Role.TECNICO)
   @ApiOperation({ summary: 'Registrar predicción (admin/técnico/sistema)' })
   @ApiResponse({ status: 201, description: 'Predicción creada' })
-  async create(@Body() dto: CreatePrediccionDto) {
-    return this.predictionsService.create(dto);
+  async create(@Body() dto: CreatePrediccionDto, @CurrentUser() usuario: Usuario) {
+    return this.predictionsService.create(dto, usuario.usuario_id, usuario.rol);
   }
 
   @Get('all')
