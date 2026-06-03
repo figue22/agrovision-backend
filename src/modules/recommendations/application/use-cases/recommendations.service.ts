@@ -133,7 +133,6 @@ export class RecommendationsService {
         const recomendaciones: Partial<Recomendacion>[] = [];
         const rend = Number(prediccion.rendimiento_predicho_ton);
         const riesgo = prediccion.nivel_riesgo;
-        const factores = (prediccion.factores_riesgo || {}) as any;
         const clima = (prediccion.datos_clima_usados || {}) as any;
 
         // ── Evaluar condiciones climáticas ──
