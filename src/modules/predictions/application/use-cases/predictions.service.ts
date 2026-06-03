@@ -3,6 +3,8 @@ import {
     NotFoundException,
     ForbiddenException,
     Logger,
+    Inject,
+    forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -25,7 +27,8 @@ export class PredictionsService {
         @InjectRepository(Parcela)
         private readonly parcelaRepo: Repository<Parcela>,
         private readonly mlService: MlService,
-        private readonly recommendationsService: RecommendationsService,
+        @Inject(forwardRef(() => RecommendationsService))
+        private readonly recommendationsService: RecommendationsService
     ) {}
 
     private async verificarAccesoParcela(parcelaId: string, usuarioId: string, rol: Rol): Promise<void> {
