@@ -10,6 +10,7 @@ import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { CreateRecomendacionDto } from '@modules/recommendations/application/dto/create-recomendacion.dto';
 import { UpdateRecomendacionDto } from '@modules/recommendations/application/dto/update-recomendacion.dto';
 import { Rol, EstadoImplementacion, Prioridad } from '@common/enums/enums';
+import { CatTipoRecomendacion } from '@modules/catalogs/domain/entities/cat-tipo-recomendacion.entity';
 
 @Injectable()
 export class RecommendationsService {
@@ -20,6 +21,8 @@ export class RecommendationsService {
         private readonly prediccionRepo: Repository<Prediccion>,
         @InjectRepository(Parcela)
         private readonly parcelaRepo: Repository<Parcela>,
+        @InjectRepository(CatTipoRecomendacion)
+        private readonly tipoRecomRepo: Repository<CatTipoRecomendacion>,
     ) { }
 
     private async verificarAccesoParcela(parcelaId: string, usuarioId: string, rol: Rol): Promise<void> {
@@ -117,38 +120,42 @@ export class RecommendationsService {
         });
         if (!prediccion) throw new NotFoundException('Predicción no encontrada');
 
-        // Eliminar recomendaciones previas de esta predicción
+        // Obtener tipos de recomendación por código
+        const tipos = await this.tipoRecomRepo.find();
+        const tipoMap: Record<string, number> = {};
+        for (const t of tipos) {
+            tipoMap[t.codigo] = t.id;
+        }
+
+        // Eliminar recomendaciones previas
         await this.recomendacionRepo.delete({ prediccion_id: prediccionId });
 
         const recomendaciones: Partial<Recomendacion>[] = [];
         const rend = Number(prediccion.rendimiento_predicho_ton);
         const riesgo = prediccion.nivel_riesgo;
+        const clima = (prediccion.datos_clima_usados || {}) as any;
+
+        // ── Evaluar condiciones climáticas ──
+        const tempBaja = clima.temp_promedio && Number(clima.temp_promedio) < 15;
+        const tempAlta = clima.temp_promedio && Number(clima.temp_promedio) > 28;
+        const pocaLluvia = clima.precipitacion_mm_90d && Number(clima.precipitacion_mm_90d) < 200;
+        const muchaLluvia = clima.precipitacion_mm_90d && Number(clima.precipitacion_mm_90d) > 800;
+        const humedadAlta = clima.humedad_pct && Number(clima.humedad_pct) > 85;
 
         // ── Recomendaciones por nivel de riesgo ──
         if (riesgo === 'critico' || riesgo === 'alto') {
             recomendaciones.push({
                 prediccion_id: prediccionId,
-                tipo_recomendacion_id: 1,
+                tipo_recomendacion_id: tipoMap['general'] || 6,
                 prioridad: Prioridad.URGENTE,
                 titulo: '🚨 Revisión urgente del cultivo requerida',
                 descripcion: `El modelo predice un rendimiento de ${rend} ton/ha con nivel de riesgo ${riesgo}. Se recomienda inspección inmediata del cultivo para identificar causas y tomar acciones correctivas.`,
                 estado_implementacion: EstadoImplementacion.PENDIENTE,
             });
-        }
-
-        if (riesgo === 'alto' || riesgo === 'critico') {
-            recomendaciones.push({
-                prediccion_id: prediccionId,
-                tipo_recomendacion_id: 2,
-                prioridad: Prioridad.ALTA,
-                titulo: '💧 Optimizar sistema de riego',
-                descripcion: 'Las condiciones climáticas y el rendimiento predicho sugieren déficit hídrico. Evalúa aumentar la frecuencia de riego y verifica la eficiencia del sistema de distribución de agua.',
-                estado_implementacion: EstadoImplementacion.PENDIENTE,
-            });
 
             recomendaciones.push({
                 prediccion_id: prediccionId,
-                tipo_recomendacion_id: 3,
+                tipo_recomendacion_id: tipoMap['fertilizacion'] || 1,
                 prioridad: Prioridad.ALTA,
                 titulo: '🧪 Plan de fertilización intensivo',
                 descripcion: 'Para mejorar el rendimiento predicho, implementa un plan de fertilización completo con análisis de suelo previo. Prioriza nitrógeno, fósforo y potasio según deficiencias identificadas.',
@@ -156,13 +163,24 @@ export class RecommendationsService {
             });
         }
 
+        if (riesgo === 'alto' || riesgo === 'critico') {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: tipoMap['riego'] || 2,
+                prioridad: Prioridad.ALTA,
+                titulo: '💧 Optimizar sistema de riego',
+                descripcion: 'Las condiciones climáticas y el rendimiento predicho sugieren déficit hídrico. Evalúa aumentar la frecuencia de riego y verifica la eficiencia del sistema de distribución de agua.',
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
         if (riesgo === 'medio') {
             recomendaciones.push({
                 prediccion_id: prediccionId,
-                tipo_recomendacion_id: 2,
+                tipo_recomendacion_id: tipoMap['general'] || 6,
                 prioridad: Prioridad.MEDIA,
                 titulo: '🌱 Ajuste de prácticas agrícolas',
-                descripcion: `Rendimiento predicho de ${rend} ton/ha. Para mejorar, considera optimizar la densidad de siembra, ajustar el calendario de fertilización y reforzar el control de plagas y enfermedades.`,
+                descripcion: `Rendimiento predicho de ${rend} ton/ha. Para mejorar, considera optimizar la densidad de siembra, ajustar el calendario de fertilización y reforzar el control de plagas.`,
                 estado_implementacion: EstadoImplementacion.PENDIENTE,
             });
         }
@@ -170,10 +188,78 @@ export class RecommendationsService {
         if (riesgo === 'bajo') {
             recomendaciones.push({
                 prediccion_id: prediccionId,
-                tipo_recomendacion_id: 4,
+                tipo_recomendacion_id: tipoMap['general'] || 6,
                 prioridad: Prioridad.BAJA,
                 titulo: '✅ Mantener prácticas actuales',
-                descripcion: `Excelente predicción de ${rend} ton/ha. Las condiciones actuales son óptimas. Mantén las prácticas agrícolas actuales y realiza monitoreo periódico para sostener el rendimiento.`,
+                descripcion: `Excelente predicción de ${rend} ton/ha. Mantén las prácticas agrícolas actuales y realiza monitoreo periódico para sostener el rendimiento.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        // ── Recomendaciones por condiciones climáticas ──
+        if (pocaLluvia) {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: tipoMap['riego'] || 2,
+                prioridad: Prioridad.ALTA,
+                titulo: '💧 Déficit hídrico detectado',
+                descripcion: `Se registraron solo ${clima.precipitacion_mm_90d} mm en los últimos 90 días. Aumenta la frecuencia de riego y considera sistemas de retención de humedad en el suelo.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        if (muchaLluvia) {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: tipoMap['plagas'] || 3,
+                prioridad: Prioridad.MEDIA,
+                titulo: '🌧️ Exceso de lluvia — riesgo de hongos',
+                descripcion: `Se registraron ${clima.precipitacion_mm_90d} mm en los últimos 90 días. El exceso de humedad favorece enfermedades fúngicas. Aplica fungicidas preventivos y mejora el drenaje.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        if (humedadAlta) {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: tipoMap['plagas'] || 3,
+                prioridad: Prioridad.MEDIA,
+                titulo: '🦟 Condiciones favorables para plagas',
+                descripcion: `Humedad del ${clima.humedad_pct}% favorece aparición de plagas y enfermedades. Realiza inspección preventiva y considera aplicación de insecticidas/fungicidas según el cultivo.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        if (tempBaja) {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: tipoMap['general'] || 6,
+                prioridad: Prioridad.ALTA,
+                titulo: '🌡️ Temperatura baja — riesgo de helada',
+                descripcion: `Temperatura de ${clima.temp_promedio}°C puede afectar el desarrollo del cultivo. Protege los cultivos sensibles y monitorea las temperaturas nocturnas.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        if (tempAlta) {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: tipoMap['riego'] || 2,
+                prioridad: Prioridad.MEDIA,
+                titulo: '🌡️ Temperatura alta — estrés térmico',
+                descripcion: `Temperatura de ${clima.temp_promedio}°C puede causar estrés térmico. Aumenta el riego y considera sombrío temporal para cultivos sensibles.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        // ── Recomendación de cosecha si rendimiento es bueno ──
+        if (rend > 0.8 && (riesgo === 'bajo' || riesgo === 'medio')) {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: tipoMap['cosecha'] || 5,
+                prioridad: Prioridad.BAJA,
+                titulo: '🌾 Planificar cosecha',
+                descripcion: `Con un rendimiento predicho de ${rend} ton/ha, planifica con anticipación la logística de cosecha: mano de obra, equipos y transporte.`,
                 estado_implementacion: EstadoImplementacion.PENDIENTE,
             });
         }
@@ -181,7 +267,7 @@ export class RecommendationsService {
         // ── Recomendación general siempre ──
         recomendaciones.push({
             prediccion_id: prediccionId,
-            tipo_recomendacion_id: 5,
+            tipo_recomendacion_id: tipoMap['general'] || 6,
             prioridad: Prioridad.BAJA,
             titulo: '📊 Registrar actividades en bitácora',
             descripcion: 'Mantén actualizada la bitácora de actividades agrícolas para mejorar la precisión de futuras predicciones del modelo ML.',
