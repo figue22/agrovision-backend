@@ -4,6 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 
 import { PredictionsService } from './predictions.service';
 import { MlService } from './ml.service';
+import { RecommendationsService } from '@modules/recommendations/application/use-cases/recommendations.service';
 import { Prediccion } from '@modules/predictions/domain/entities/prediccion.entity';
 import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { Rol } from '@common/enums/enums';
@@ -43,6 +44,10 @@ const mockMlService = {
   }),
 };
 
+const mockRecommendationsService = {
+  generarParaPrediccion: jest.fn().mockResolvedValue([]),
+};
+
 describe('PredictionsService', () => {
   let service: PredictionsService;
 
@@ -53,6 +58,7 @@ describe('PredictionsService', () => {
         { provide: getRepositoryToken(Prediccion), useValue: mockPredRepo },
         { provide: getRepositoryToken(Parcela), useValue: mockParcelaRepo },
         { provide: MlService, useValue: mockMlService },
+        { provide: RecommendationsService, useValue: mockRecommendationsService },
       ],
     }).compile();
 
