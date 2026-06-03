@@ -9,7 +9,7 @@ import { Prediccion } from '@modules/predictions/domain/entities/prediccion.enti
 import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { CreateRecomendacionDto } from '@modules/recommendations/application/dto/create-recomendacion.dto';
 import { UpdateRecomendacionDto } from '@modules/recommendations/application/dto/update-recomendacion.dto';
-import { Rol, EstadoImplementacion } from '@common/enums/enums';
+import { Rol, EstadoImplementacion, Prioridad } from '@common/enums/enums';
 
 @Injectable()
 export class RecommendationsService {
@@ -108,5 +108,93 @@ export class RecommendationsService {
             order: { creado_en: 'DESC' },
             take: limit,
         });
+    }
+
+    async generarParaPrediccion(prediccionId: string): Promise<Recomendacion[]> {
+        const prediccion = await this.prediccionRepo.findOne({
+            where: { prediccion_id: prediccionId },
+            relations: ['tipoCultivo'],
+        });
+        if (!prediccion) throw new NotFoundException('Predicción no encontrada');
+
+        // Eliminar recomendaciones previas de esta predicción
+        await this.recomendacionRepo.delete({ prediccion_id: prediccionId });
+
+        const recomendaciones: Partial<Recomendacion>[] = [];
+        const rend = Number(prediccion.rendimiento_predicho_ton);
+        const riesgo = prediccion.nivel_riesgo;
+
+        // ── Recomendaciones por nivel de riesgo ──
+        if (riesgo === 'critico' || riesgo === 'alto') {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: 1,
+                prioridad: Prioridad.URGENTE,
+                titulo: '🚨 Revisión urgente del cultivo requerida',
+                descripcion: `El modelo predice un rendimiento de ${rend} ton/ha con nivel de riesgo ${riesgo}. Se recomienda inspección inmediata del cultivo para identificar causas y tomar acciones correctivas.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        if (riesgo === 'alto' || riesgo === 'critico') {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: 2,
+                prioridad: Prioridad.ALTA,
+                titulo: '💧 Optimizar sistema de riego',
+                descripcion: 'Las condiciones climáticas y el rendimiento predicho sugieren déficit hídrico. Evalúa aumentar la frecuencia de riego y verifica la eficiencia del sistema de distribución de agua.',
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: 3,
+                prioridad: Prioridad.ALTA,
+                titulo: '🧪 Plan de fertilización intensivo',
+                descripcion: 'Para mejorar el rendimiento predicho, implementa un plan de fertilización completo con análisis de suelo previo. Prioriza nitrógeno, fósforo y potasio según deficiencias identificadas.',
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        if (riesgo === 'medio') {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: 2,
+                prioridad: Prioridad.MEDIA,
+                titulo: '🌱 Ajuste de prácticas agrícolas',
+                descripcion: `Rendimiento predicho de ${rend} ton/ha. Para mejorar, considera optimizar la densidad de siembra, ajustar el calendario de fertilización y reforzar el control de plagas y enfermedades.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        if (riesgo === 'bajo') {
+            recomendaciones.push({
+                prediccion_id: prediccionId,
+                tipo_recomendacion_id: 4,
+                prioridad: Prioridad.BAJA,
+                titulo: '✅ Mantener prácticas actuales',
+                descripcion: `Excelente predicción de ${rend} ton/ha. Las condiciones actuales son óptimas. Mantén las prácticas agrícolas actuales y realiza monitoreo periódico para sostener el rendimiento.`,
+                estado_implementacion: EstadoImplementacion.PENDIENTE,
+            });
+        }
+
+        // ── Recomendación general siempre ──
+        recomendaciones.push({
+            prediccion_id: prediccionId,
+            tipo_recomendacion_id: 5,
+            prioridad: Prioridad.BAJA,
+            titulo: '📊 Registrar actividades en bitácora',
+            descripcion: 'Mantén actualizada la bitácora de actividades agrícolas para mejorar la precisión de futuras predicciones del modelo ML.',
+            estado_implementacion: EstadoImplementacion.PENDIENTE,
+        });
+
+        const guardadas: Recomendacion[] = [];
+        for (const r of recomendaciones) {
+            const entidad = this.recomendacionRepo.create(r as Recomendacion);
+            const saved = await this.recomendacionRepo.save(entidad);
+            guardadas.push(saved as Recomendacion);
+        }
+
+        return guardadas;
     }
 }

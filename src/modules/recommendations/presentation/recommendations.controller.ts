@@ -78,4 +78,12 @@ export class RecommendationsController {
   async remove(@Param('id') id: string) {
     return this.recommendationsService.remove(id);
   }
+
+  @Post('generar/:prediccionId')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN, Role.TECNICO, Role.AGRICULTOR)
+  @ApiOperation({ summary: 'Generar recomendaciones automáticas para una predicción' })
+  async generar(@Param('prediccionId') prediccionId: string) {
+      return this.recommendationsService.generarParaPrediccion(prediccionId);
+  }
 }
