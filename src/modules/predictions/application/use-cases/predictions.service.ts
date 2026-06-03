@@ -3,6 +3,8 @@ import {
     NotFoundException,
     ForbiddenException,
     Logger,
+    Inject,
+    forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +15,7 @@ import { CreatePrediccionDto } from '@modules/predictions/application/dto/create
 import { UpdatePrediccionDto } from '@modules/predictions/application/dto/update-prediccion.dto';
 import { MlService } from '@modules/predictions/application/use-cases/ml.service';
 import { Rol, NivelRiesgo } from '@common/enums/enums';
+import { RecommendationsService } from '@modules/recommendations/application/use-cases/recommendations.service';
 
 @Injectable()
 export class PredictionsService {
@@ -24,6 +27,8 @@ export class PredictionsService {
         @InjectRepository(Parcela)
         private readonly parcelaRepo: Repository<Parcela>,
         private readonly mlService: MlService,
+        @Inject(forwardRef(() => RecommendationsService))
+        private readonly recommendationsService: RecommendationsService
     ) {}
 
     private async verificarAccesoParcela(parcelaId: string, usuarioId: string, rol: Rol): Promise<void> {
@@ -76,7 +81,17 @@ export class PredictionsService {
             fecha_prediccion: mlResult?.fecha_prediccion ? new Date(mlResult.fecha_prediccion) : new Date(),
         });
 
-        return this.prediccionRepo.save(prediccion);
+        const saved = await this.prediccionRepo.save(prediccion);
+
+        // Generar recomendaciones automáticas
+        try {
+            await this.recommendationsService.generarParaPrediccion(saved.prediccion_id);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            this.logger.warn(`No se pudieron generar recomendaciones: ${msg}`);
+        }
+
+        return saved;
     }
 
     async findByParcela(parcelaId: string, usuarioId: string, rol: Rol): Promise<Prediccion[]> {
