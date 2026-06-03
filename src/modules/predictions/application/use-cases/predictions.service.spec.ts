@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
 
 import { PredictionsService } from './predictions.service';
+import { MlService } from './ml.service';
 import { Prediccion } from '@modules/predictions/domain/entities/prediccion.entity';
 import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { Rol } from '@common/enums/enums';
@@ -26,6 +27,22 @@ const mockPredRepo = {
 
 const mockParcelaRepo = { findOne: jest.fn() };
 
+const mockMlService = {
+  predict: jest.fn().mockResolvedValue({
+    version_modelo: '1.0.0',
+    tipo_modelo: 'ensemble',
+    rendimiento_predicho_ton: 1.5,
+    puntaje_confianza: 85,
+    intervalo_conf_inferior: 1.35,
+    intervalo_conf_superior: 1.65,
+    nivel_riesgo: 'medio',
+    factores_riesgo: {},
+    datos_clima_usados: {},
+    importancia_features: {},
+    fecha_prediccion: new Date().toISOString(),
+  }),
+};
+
 describe('PredictionsService', () => {
   let service: PredictionsService;
 
@@ -35,6 +52,7 @@ describe('PredictionsService', () => {
         PredictionsService,
         { provide: getRepositoryToken(Prediccion), useValue: mockPredRepo },
         { provide: getRepositoryToken(Parcela), useValue: mockParcelaRepo },
+        { provide: MlService, useValue: mockMlService },
       ],
     }).compile();
 
@@ -47,13 +65,15 @@ describe('PredictionsService', () => {
   describe('create', () => {
     it('debe crear una predicción', async () => {
       mockParcelaRepo.findOne.mockResolvedValue(mockParcela);
-      await service.create({ parcela_id: 'uuid-parcela-1' } as any);
+      await service.create({ parcela_id: 'uuid-parcela-1' } as any, 'uuid-user-1', Rol.AGRICULTOR);
       expect(mockPredRepo.save).toHaveBeenCalled();
     });
 
     it('debe lanzar NotFoundException si parcela no existe', async () => {
       mockParcelaRepo.findOne.mockResolvedValue(null);
-      await expect(service.create({ parcela_id: 'uuid-no' } as any)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.create({ parcela_id: 'uuid-no' } as any, 'uuid-user-1', Rol.AGRICULTOR),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
