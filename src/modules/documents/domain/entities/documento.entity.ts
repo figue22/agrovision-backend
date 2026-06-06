@@ -49,6 +49,12 @@ export class Documento {
   @Column({ type: 'enum', enum: EstadoIndexacion })
   estado_indexacion: EstadoIndexacion;
 
+  @Column({ type: 'integer', default: 0 })
+  chunks_indexados: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  fecha_indexacion: Date;
+
   @Column({ type: 'boolean', default: true })
   esta_activo: boolean;
 
