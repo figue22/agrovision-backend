@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { DocumentsService } from './documents.service';
 import { Documento } from '@modules/documents/domain/entities/documento.entity';
@@ -26,7 +27,14 @@ const mockDocRepo = {
   count: jest.fn().mockResolvedValue(10),
 };
 
-const mockIndiceRepo = { findOne: jest.fn() };
+const mockIndiceRepo = {
+  findOne: jest.fn(),
+  delete: jest.fn().mockResolvedValue({}),
+};
+
+const mockConfigService = {
+  get: jest.fn().mockReturnValue('http://localhost:8002'),
+};
 
 describe('DocumentsService', () => {
   let service: DocumentsService;
@@ -37,6 +45,7 @@ describe('DocumentsService', () => {
         DocumentsService,
         { provide: getRepositoryToken(Documento), useValue: mockDocRepo },
         { provide: getRepositoryToken(IndiceRagDocumento), useValue: mockIndiceRepo },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -72,11 +81,13 @@ describe('DocumentsService', () => {
     it('debe eliminar documento', async () => {
       mockDocRepo.findOne.mockResolvedValue(mockDoc);
       await expect(service.remove('uuid-doc-1')).resolves.toBeUndefined();
+      expect(mockIndiceRepo.delete).toHaveBeenCalledWith({ documento_id: 'uuid-doc-1' });
     });
   });
 
   describe('getResumen', () => {
     it('debe retornar conteos', async () => {
+      mockDocRepo.count.mockResolvedValue(10);
       const result = await service.getResumen();
       expect(result).toHaveProperty('total');
       expect(result).toHaveProperty('activos');
