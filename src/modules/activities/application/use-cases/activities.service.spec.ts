@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { ActivitiesService } from './activities.service';
 import { Actividad } from '@modules/activities/domain/entities/actividad.entity';
@@ -52,6 +53,8 @@ const mockParcelaRepo = {
   findOne: jest.fn(),
 };
 
+const mockEventEmitter = { emit: jest.fn() };
+
 describe('ActivitiesService', () => {
   let service: ActivitiesService;
 
@@ -62,6 +65,7 @@ describe('ActivitiesService', () => {
         { provide: getRepositoryToken(Actividad), useValue: mockActividadRepo },
         { provide: getRepositoryToken(InsumoActividad), useValue: mockInsumoRepo },
         { provide: getRepositoryToken(Parcela), useValue: mockParcelaRepo },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
 
