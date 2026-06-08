@@ -1,14 +1,8 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-  Index,
+  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
+  UpdateDateColumn, ManyToOne, JoinColumn, Index,
 } from 'typeorm';
-import { EstadoRegistroWhatsapp } from '../../../../common/enums/enums';;
+import { EstadoRegistroWhatsapp } from '../../../../common/enums/enums';
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
 
 @Entity('sesiones_whatsapp')
@@ -19,6 +13,9 @@ export class SesionWhatsapp {
 
   @Column({ type: 'varchar', length: 20, unique: true })
   wa_id: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  numero_telefono: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   nombre_mostrado: string;
@@ -34,6 +31,24 @@ export class SesionWhatsapp {
 
   @Column({ type: 'jsonb', nullable: true })
   contexto_sesion: object;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  ultimo_intent: string;
+
+  @Column({ type: 'integer', default: 0 })
+  mensajes_enviados: number;
+
+  @Column({ type: 'integer', default: 0 })
+  mensajes_recibidos: number;
+
+  @Column({ type: 'float', nullable: true })
+  nivel_satisfaccion: number;
+
+  @Column({ type: 'integer', default: 0 })
+  total_consultas_rag: number;
+
+  @Column({ type: 'integer', default: 0 })
+  total_predicciones: number;
 
   @Column({ type: 'timestamp' })
   primera_interaccion: Date;
@@ -52,8 +67,6 @@ export class SesionWhatsapp {
 
   @UpdateDateColumn({ type: 'timestamp' })
   actualizado_en: Date;
-
-  // ── Relaciones ──
 
   @ManyToOne(() => Usuario, (usuario) => usuario.sesionesWhatsapp, { nullable: true })
   @JoinColumn({ name: 'usuario_id' })
