@@ -63,7 +63,7 @@ describe('WhatsappAlertsService', () => {
 
             expect(mockMetaService.sendTextMessage).toHaveBeenCalledWith(
                 '573001234567',
-                expect.stringContaining('CRÍTICA'),
+                expect.stringContaining('ALTA'),
             );
         });
 
