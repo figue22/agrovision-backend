@@ -97,6 +97,29 @@ export class WhatsappWebhookService {
 
         const texto = message.text.body.trim();
 
+        // ── Cambio de idioma pendiente ──
+        const contextoActual = (sesion.contexto_sesion as any) || {};
+        if (contextoActual.esperando_idioma && (texto.toLowerCase() === 'es' || texto.toLowerCase() === 'en')) {
+            if (texto.toLowerCase() === 'en') {
+                await this.metaService.sendTextMessage(from,
+                    '🚧 El soporte para idioma inglés está en desarrollo. Por ahora puedes chatear en español. 🇨🇴',
+                );
+                await this.whatsappService.updateByWaId(from, {
+                    contexto_sesion: { ...contextoActual, esperando_idioma: false },
+                } as any);
+                return;
+            }
+
+            await this.whatsappService.updateByWaId(from, {
+                idioma_preferido: 'es',
+                contexto_sesion: { ...contextoActual, esperando_idioma: false },
+            } as any);
+            await this.metaService.sendTextMessage(from,
+                `✅ Idioma cambiado a *Español*. ¡Listo! 🇨🇴`,
+            );
+            return;
+        }
+
         // ── Comando para vincular cuenta en cualquier momento ──
         if (texto.toLowerCase() === 'vincular' || texto.toLowerCase() === '*vincular*') {
             await this.whatsappService.updateByWaId(from, {
@@ -109,6 +132,12 @@ export class WhatsappWebhookService {
                 '🔗 *Vincular cuenta AgroVision*\n\n' +
                 'Escríbeme el correo electrónico con el que te registraste en AgroVision:',
             );
+            return;
+        }
+
+        // ── Comandos del menú ──
+        if (texto.startsWith('/') || texto.startsWith('*')) {
+            await this.handleComando(from, texto.toLowerCase(), sesion);
             return;
         }
 
@@ -291,5 +320,109 @@ export class WhatsappWebhookService {
             .replace(/\n{3,}/g, '\n\n')
             .trim()
             .slice(0, 4096);
+    }
+
+    private async handleComando(from: string, comando: string, sesion: any): Promise<void> {
+        switch (comando.replace(/\*/g, '').trim()) {
+            case '/menu':
+            case 'menu':
+                await this.metaService.sendTextMessage(from,
+                    `🌱 *Menú AgroVision*\n\n` +
+                    `Elige una opción:\n\n` +
+                    `📊 */prediccion* — Ver tu última predicción\n` +
+                    `⚠️ */alertas* — Ver alertas activas\n` +
+                    `🌤️ */clima* — Consultar el clima\n` +
+                    `📚 */rag* — Consultar documentos técnicos\n` +
+                    `❓ */ayuda* — Ver todos los comandos\n` +
+                    (sesion.usuario_id ? '' : `\n🔗 *vincular* — Asociar tu cuenta AgroVision`),
+                );
+                break;
+
+            case '/prediccion':
+            case 'prediccion':
+                if (!sesion.usuario_id) {
+                    await this.metaService.sendTextMessage(from,
+                        '⚠️ Necesitas vincular tu cuenta para ver predicciones.\n\nEscribe *vincular* para asociar tu cuenta.',
+                    );
+                    return;
+                }
+                const respPred = await this.chatbotService.sendMessage(
+                    sesion.usuario_id, '¿Cuál es mi predicción de rendimiento?', `wa_${from}`,
+                );
+                await this.metaService.sendTextMessage(from, this.formatForWhatsApp(respPred.respuesta));
+                break;
+
+            case '/alertas':
+            case 'alertas':
+                if (!sesion.usuario_id) {
+                    await this.metaService.sendTextMessage(from,
+                        '⚠️ Necesitas vincular tu cuenta para ver alertas.\n\nEscribe *vincular* para asociar tu cuenta.',
+                    );
+                    return;
+                }
+                const respAlert = await this.chatbotService.sendMessage(
+                    sesion.usuario_id, '¿Tengo alertas activas?', `wa_${from}`,
+                );
+                await this.metaService.sendTextMessage(from, this.formatForWhatsApp(respAlert.respuesta));
+                break;
+
+            case '/clima':
+            case 'clima':
+                if (!sesion.usuario_id) {
+                    await this.metaService.sendTextMessage(from,
+                        '⚠️ Necesitas vincular tu cuenta para consultar el clima de tu parcela.\n\nEscribe *vincular* para asociar tu cuenta.',
+                    );
+                    return;
+                }
+                const respClima = await this.chatbotService.sendMessage(
+                    sesion.usuario_id, '¿Cómo está el clima hoy?', `wa_${from}`,
+                );
+                await this.metaService.sendTextMessage(from, this.formatForWhatsApp(respClima.respuesta));
+                break;
+
+            case '/rag':
+            case 'rag':
+                await this.metaService.sendTextMessage(from,
+                    '📚 *Consulta de documentos técnicos*\n\n' +
+                    'Escribe tu pregunta sobre agricultura y buscaré en los documentos técnicos de ICA, AGROSAVIA y CENICAFÉ.\n\n' +
+                    'Ejemplo: _¿Cómo controlar la roya del café?_',
+                );
+                break;
+
+            case '/ayuda':
+            case 'ayuda':
+                await this.metaService.sendTextMessage(from,
+                    `❓ *Comandos disponibles*\n\n` +
+                    `*/menu* — Menú principal\n` +
+                    `*/prediccion* — Última predicción de rendimiento\n` +
+                    `*/alertas* — Alertas climáticas activas\n` +
+                    `*/clima* — Clima actual de tu parcela\n` +
+                    `*/rag* — Consultar documentos técnicos\n` +
+                    `*/idioma* — Cambiar idioma (es/en)\n` +
+                    `*/ayuda* — Ver esta ayuda\n\n` +
+                    `🔗 *vincular* — Asociar cuenta AgroVision\n` +
+                    `🚫 *omitir* — Continuar sin cuenta\n\n` +
+                    `💡 También puedes escribir cualquier pregunta directamente.`,
+                );
+                break;
+            
+            case '/idioma':
+            case 'idioma':
+                await this.whatsappService.updateByWaId(from, {
+                    contexto_sesion: { ...(sesion.contexto_sesion || {}), esperando_idioma: true },
+                } as any);
+                await this.metaService.sendTextMessage(from,
+                    '🌐 *Cambiar idioma*\n\n' +
+                    'Elige tu idioma preferido:\n\n' +
+                    '🇨🇴 Escribe *es* para Español\n' +
+                    '🇺🇸 Escribe *en* para English',
+                );
+                break;
+
+            default:
+                await this.metaService.sendTextMessage(from,
+                    `❓ Comando no reconocido. Escribe */menu* para ver las opciones disponibles.`,
+                );
+        }
     }
 }
