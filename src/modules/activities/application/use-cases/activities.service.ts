@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository} from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Actividad } from '@modules/activities/domain/entities/actividad.entity';
 import { InsumoActividad } from '@modules/activities/domain/entities/insumo-actividad.entity';
@@ -22,6 +23,7 @@ export class ActivitiesService {
         private readonly insumoRepo: Repository<InsumoActividad>,
         @InjectRepository(Parcela)
         private readonly parcelaRepo: Repository<Parcela>,
+        private readonly eventEmitter: EventEmitter2,
     ) { }
 
     private async verificarAccesoParcela(
@@ -54,7 +56,21 @@ export class ActivitiesService {
             insumos: dto.insumos?.map((insumo) => this.insumoRepo.create(insumo)),
         });
 
-        return this.actividadRepo.save(actividad);
+        const saved = await this.actividadRepo.save(actividad);
+
+        // Emitir evento para crear recordatorios si tiene fecha futura
+        if (saved.fecha_realizacion && new Date(saved.fecha_realizacion) > new Date()) {
+            this.eventEmitter.emit('actividad.creada', {
+                actividad_id: saved.actividad_id,
+                usuario_id: usuarioId,
+                parcela_id: saved.parcela_id,
+                titulo: saved.descripcion || 'Actividad agrícola',
+                descripcion: saved.notas,
+                fecha_actividad: new Date(saved.fecha_realizacion),
+            });
+        }
+
+        return saved;
     }
 
    async findByParcela(parcelaId: string, usuarioId: string, rol: string): Promise<Actividad[]> {

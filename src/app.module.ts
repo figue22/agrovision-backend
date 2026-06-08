@@ -5,6 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bull';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // Redis & Rate Limiting
 import { RedisModule } from '@common/redis.module';
@@ -26,11 +27,16 @@ import { DocumentsModule } from '@modules/documents/documents.module';
 import { CatalogsModule } from '@modules/catalogs/catalogs.module';
 import { AuditModule } from '@modules/audit/audit.module';
 import { AdminModule } from '@modules/admin/admin.module';
+import { CalendarioModule } from '@modules/calendario/calendario.module';
 
 @Module({
   imports: [
     // Alertas
     EventEmitterModule.forRoot(),
+
+    // Calendario
+    CalendarioModule,
+    ScheduleModule.forRoot(),
 
     // Configuration
     ConfigModule.forRoot({
