@@ -95,6 +95,17 @@ export class WhatsappWebhookService {
             return;
         }
 
+        // Verificar si el bot está pausado
+        if (sesion.bot_pausado) {
+            if (sesion.bot_pausado_hasta && new Date() > new Date(sesion.bot_pausado_hasta)) {
+                // Reanudar automáticamente si expiró
+                await this.whatsappService.reanudarBot(from);
+            } else {
+                this.logger.log(`Bot pausado para ${from} — mensaje ignorado`);
+                return;
+            }
+        }
+
         const texto = message.text.body.trim();
 
         // ── Cambio de idioma pendiente ──
