@@ -15,7 +15,7 @@ import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class ChatbotController {
-  constructor(private readonly chatbotService: ChatbotService) { }
+  constructor(private readonly chatbotService: ChatbotService) {}
 
   @Post('message')
   @ApiOperation({ summary: 'Enviar mensaje al chatbot agrícola' })
@@ -27,15 +27,19 @@ export class ChatbotController {
     return this.chatbotService.sendMessage(
       usuario.usuario_id,
       dto.mensaje,
-      // dto.parcela_id,
       dto.conversacion_id,
+      {
+        cultivo: dto.cultivo,
+        region: dto.region,
+        nombreUsuario: `${usuario.nombre} ${usuario.apellido}`,
+      },
     );
   }
 
   @Get('historial/:conversacionId')
   @ApiOperation({ summary: 'Obtener historial de conversación' })
   async getHistorial(@Param('conversacionId') conversacionId: string) {
-    return this.chatbotService.getHistorial(conversacionId);
+    return this.chatbotService.getHistorialPublico(conversacionId);
   }
 
   @Delete('conversacion/:conversacionId')
