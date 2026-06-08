@@ -62,6 +62,12 @@ export class SesionWhatsapp {
   @Column({ type: 'text', nullable: true })
   razon_bloqueo: string;
 
+  @Column({ type: 'boolean', default: false })
+  bot_pausado: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  bot_pausado_hasta: Date;
+
   @CreateDateColumn({ type: 'timestamp' })
   creado_en: Date;
 

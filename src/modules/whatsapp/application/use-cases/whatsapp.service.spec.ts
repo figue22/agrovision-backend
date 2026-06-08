@@ -105,4 +105,36 @@ describe('WhatsappService', () => {
       expect(result).toHaveProperty('activos_24h');
     });
   });
+
+  describe('pausarBot', () => {
+      it('debe pausar el bot para un número', async () => {
+          mockSesionRepo.findOne.mockResolvedValue({
+              sesion_wa_id: 'uuid-1',
+              wa_id: '573001234567',
+              bot_pausado: false,
+          });
+          mockSesionRepo.save.mockResolvedValue({
+              wa_id: '573001234567',
+              bot_pausado: true,
+          });
+          const result = await service.pausarBot('573001234567', 30);
+          expect(result.bot_pausado).toBe(true);
+      });
+  });
+
+  describe('reanudarBot', () => {
+      it('debe reanudar el bot para un número', async () => {
+          mockSesionRepo.findOne.mockResolvedValue({
+              sesion_wa_id: 'uuid-1',
+              wa_id: '573001234567',
+              bot_pausado: true,
+          });
+          mockSesionRepo.save.mockResolvedValue({
+              wa_id: '573001234567',
+              bot_pausado: false,
+          });
+          const result = await service.reanudarBot('573001234567');
+          expect(result.bot_pausado).toBe(false);
+      });
+  });
 });

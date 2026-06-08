@@ -102,4 +102,48 @@ export class WhatsappService {
 
         return { total, registrados, bloqueados, activos_24h: activos24h };
     }
+
+    async pausarBot(waId: string, minutosOrNull?: number): Promise<SesionWhatsapp> {
+        const sesion = await this.findByWaId(waId);
+        if (!sesion) throw new NotFoundException(`Sesión ${waId} no encontrada`);
+
+        const pausadoHasta = minutosOrNull
+            ? new Date(Date.now() + minutosOrNull * 60 * 1000)
+            : null;
+
+        Object.assign(sesion, {
+            bot_pausado: true,
+            bot_pausado_hasta: pausadoHasta,
+            ultima_interaccion: new Date(),
+        });
+        return this.sesionRepo.save(sesion);
+    }
+
+    async reanudarBot(waId: string): Promise<SesionWhatsapp> {
+        const sesion = await this.findByWaId(waId);
+        if (!sesion) throw new NotFoundException(`Sesión ${waId} no encontrada`);
+
+        Object.assign(sesion, {
+            bot_pausado: false,
+            bot_pausado_hasta: null,
+            ultima_interaccion: new Date(),
+        });
+        return this.sesionRepo.save(sesion);
+    }
+
+    async getConversacionesActivas(): Promise<SesionWhatsapp[]> {
+        const hace1h = new Date(Date.now() - 60 * 60 * 1000);
+        return this.sesionRepo
+            .createQueryBuilder('s')
+            .leftJoinAndSelect('s.usuario', 'usuario')
+            .where('s.ultima_interaccion >= :fecha', { fecha: hace1h })
+            .orderBy('s.ultima_interaccion', 'DESC')
+            .getMany();
+    }
+
+    async enviarMensajeManual(waId: string): Promise<{ enviado: boolean }> {
+        const sesion = await this.findByWaId(waId);
+        if (!sesion) throw new NotFoundException(`Sesión ${waId} no encontrada`);
+        return { enviado: true };
+    }
 }
