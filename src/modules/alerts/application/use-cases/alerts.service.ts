@@ -3,22 +3,31 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Alerta } from '@modules/alerts/domain/entities/alerta.entity';
 import { CreateAlertaDto } from '@modules/alerts/application/dto/create-alerta.dto';
 import { UpdateAlertaDto } from '@modules/alerts/application/dto/update-alerta.dto';
-import { Rol } from '@common/enums/enums';
+import { Rol, Severidad } from '@common/enums/enums';
 
 @Injectable()
 export class AlertsService {
+
     constructor(
         @InjectRepository(Alerta)
         private readonly alertaRepo: Repository<Alerta>,
+        private readonly eventEmitter: EventEmitter2,
     ) { }
 
     async create(dto: CreateAlertaDto): Promise<Alerta> {
         const alerta = this.alertaRepo.create(dto);
-        return this.alertaRepo.save(alerta);
+        const saved = await this.alertaRepo.save(alerta);
+
+        if ([Severidad.CRITICA, Severidad.ALTA].includes(saved.severidad)) {
+            this.eventEmitter.emit('alerta.critica', saved);
+        }
+
+        return saved;
     }
 
     async findMyAlerts(usuarioId: string): Promise<Alerta[]> {

@@ -8,6 +8,7 @@ import { WhatsappController } from './presentation/whatsapp.controller';
 import { WebhookController } from './presentation/webhook.controller';
 import { WhatsappService } from './application/use-cases/whatsapp.service';
 import { WhatsappWebhookService } from './application/use-cases/whatsapp-webhook.service';
+import { WhatsappAlertsService } from './application/use-cases/whatsapp-alerts.service';
 import { MetaWhatsappService } from './infrastructure/external-services/meta-whatsapp.service';
 import { WhatsappMessageProcessor, WHATSAPP_QUEUE } from './infrastructure/whatsapp-message.processor';
 import { ChatbotModule } from '@modules/chatbot/chatbot.module';
@@ -25,9 +26,10 @@ import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
     providers: [
         WhatsappService,
         WhatsappWebhookService,
+        WhatsappAlertsService,
         MetaWhatsappService,
         WhatsappMessageProcessor,
     ],
-    exports: [WhatsappService, MetaWhatsappService],
+    exports: [WhatsappService, MetaWhatsappService, WhatsappAlertsService],
 })
 export class WhatsappModule {}
