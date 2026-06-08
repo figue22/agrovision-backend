@@ -1,19 +1,28 @@
-import { IsString, IsOptional, IsUUID, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SendMessageDto {
-    @ApiProperty({ example: '¿Cuándo debo regar mi cultivo de café?' })
+    @ApiProperty({ example: '¿Cómo fertilizar el café?' })
     @IsString()
-    @MaxLength(2000)
     mensaje: string;
 
-    @ApiPropertyOptional({ example: 'uuid-parcela', description: 'Contexto de parcela específica' })
-    @IsOptional()
-    @IsUUID()
-    parcela_id?: string;
-
-    @ApiPropertyOptional({ example: 'conv-uuid', description: 'ID de conversación para mantener contexto' })
+    @ApiPropertyOptional()
     @IsOptional()
     @IsString()
     conversacion_id?: string;
+
+    @ApiPropertyOptional({ example: 'cafe' })
+    @IsOptional()
+    @IsString()
+    cultivo?: string;
+
+    @ApiPropertyOptional({ example: 'Caldas' })
+    @IsOptional()
+    @IsString()
+    region?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsUUID()
+    parcela_id?: string;
 }
