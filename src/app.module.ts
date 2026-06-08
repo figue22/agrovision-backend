@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { BullModule } from '@nestjs/bull';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 // Redis & Rate Limiting
 import { RedisModule } from '@common/redis.module';
@@ -28,6 +29,9 @@ import { AdminModule } from '@modules/admin/admin.module';
 
 @Module({
   imports: [
+    // Alertas
+    EventEmitterModule.forRoot(),
+
     // Configuration
     ConfigModule.forRoot({
       isGlobal: true,

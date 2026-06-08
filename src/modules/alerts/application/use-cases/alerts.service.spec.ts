@@ -4,6 +4,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
 import { AlertsService } from './alerts.service';
 import { Alerta } from '@modules/alerts/domain/entities/alerta.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const mockAlerta = {
   alerta_id: 'uuid-alerta-1',
@@ -16,6 +17,10 @@ const mockAlerta = {
   esta_leida: false,
   fecha_lectura: null,
   creado_en: new Date(),
+};
+
+const mockEventEmitter = {
+    emit: jest.fn(),
 };
 
 const mockAlertaRepo = {
@@ -36,6 +41,7 @@ describe('AlertsService', () => {
       providers: [
         AlertsService,
         { provide: getRepositoryToken(Alerta), useValue: mockAlertaRepo },
+        { provide: EventEmitter2, useValue: mockEventEmitter },
       ],
     }).compile();
 
