@@ -182,4 +182,88 @@ describe('WhatsappWebhookService', () => {
             );
         });
     });
+
+    describe('handleComando', () => {
+        it('debe responder /menu sin cuenta asociada', async () => {
+            mockWhatsappService.findOrCreate.mockResolvedValueOnce({
+                sesion_wa_id: 'uuid-1',
+                wa_id: '573001234567',
+                esta_bloqueado: false,
+                usuario_id: null,
+                contexto_sesion: { omitio_asociacion: true },
+                mensajes_enviados: 0,
+                mensajes_recibidos: 0,
+                total_consultas_rag: 0,
+                total_predicciones: 0,
+            });
+
+            await service.processWebhook({
+                object: 'whatsapp_business_account',
+                entry: [{
+                    id: 'entry-1',
+                    changes: [{
+                        field: 'messages',
+                        value: {
+                            messaging_product: 'whatsapp',
+                            metadata: { phone_number_id: '123', display_phone_number: '123' },
+                            contacts: [],
+                            messages: [{
+                                from: '573001234567',
+                                id: 'msg-1',
+                                timestamp: '1234567890',
+                                type: 'text',
+                                text: { body: '/menu' },
+                            }],
+                        },
+                    }],
+                }],
+            });
+
+            expect(mockMetaService.sendTextMessage).toHaveBeenCalledWith(
+                '573001234567',
+                expect.stringContaining('Menú AgroVision'),
+            );
+        });
+
+        it('debe requerir cuenta para /prediccion', async () => {
+            mockWhatsappService.findOrCreate.mockResolvedValueOnce({
+                sesion_wa_id: 'uuid-1',
+                wa_id: '573001234567',
+                esta_bloqueado: false,
+                usuario_id: null,
+                contexto_sesion: { omitio_asociacion: true },
+                mensajes_enviados: 0,
+                mensajes_recibidos: 0,
+                total_consultas_rag: 0,
+                total_predicciones: 0,
+            });
+
+            await service.processWebhook({
+                object: 'whatsapp_business_account',
+                entry: [{
+                    id: 'entry-1',
+                    changes: [{
+                        field: 'messages',
+                        value: {
+                            messaging_product: 'whatsapp',
+                            metadata: { phone_number_id: '123', display_phone_number: '123' },
+                            contacts: [],
+                            messages: [{
+                                from: '573001234567',
+                                id: 'msg-2',
+                                timestamp: '1234567890',
+                                type: 'text',
+                                text: { body: '/prediccion' },
+                            }],
+                        },
+                    }],
+                }],
+            });
+
+            expect(mockMetaService.sendTextMessage).toHaveBeenCalledWith(
+                '573001234567',
+                expect.stringContaining('vincular'),
+            );
+        });
+    });
 });
