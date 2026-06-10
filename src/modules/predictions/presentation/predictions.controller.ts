@@ -23,7 +23,7 @@ export class PredictionsController {
 
   @Post()
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.TECNICO)
+  @Roles(Role.ADMIN, Role.TECNICO, Role.AGRICULTOR)
   @ApiOperation({ summary: 'Registrar predicción (admin/técnico/sistema)' })
   @ApiResponse({ status: 201, description: 'Predicción creada' })
   async create(@Body() dto: CreatePrediccionDto, @CurrentUser() usuario: Usuario) {
@@ -32,7 +32,7 @@ export class PredictionsController {
 
   @Get('all')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.TECNICO)
+  @Roles(Role.ADMIN, Role.TECNICO, Role.AGRICULTOR)
   @ApiOperation({ summary: 'Listar todas las predicciones (admin/técnico)' })
   @ApiQuery({ name: 'limit', required: false, example: 50 })
   async findAll(@Query('limit') limit?: number) {
@@ -60,7 +60,7 @@ export class PredictionsController {
 
   @Put(':id')
   @UseGuards(RolesGuard)
-  @Roles(Role.ADMIN, Role.TECNICO)
+  @Roles(Role.ADMIN, Role.TECNICO, Role.AGRICULTOR)
   @ApiOperation({ summary: 'Actualizar predicción (admin/técnico)' })
   async update(@Param('id') id: string, @Body() dto: UpdatePrediccionDto) {
     return this.predictionsService.update(id, dto);
