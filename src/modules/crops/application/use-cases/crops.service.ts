@@ -17,6 +17,9 @@ import { UpdateTipoCultivoDto } from '@modules/crops/application/dto/update-tipo
 import { CreateCultivoParcelaDto } from '@modules/crops/application/dto/create-cultivo-parcela.dto';
 import { UpdateCultivoParcelaDto } from '@modules/crops/application/dto/update-cultivo-parcela.dto';
 import {Rol, EstadoCultivo} from '@common/enums/enums';
+import { Prediccion } from '@modules/predictions/domain/entities/prediccion.entity';
+import {Recomendacion} from "@modules/recommendations/domain/entities/recomendacion.entity";
+import {Actividad} from "@modules/activities/domain/entities/actividad.entity";
 
 @Injectable()
 export class CropsService {
@@ -31,6 +34,13 @@ export class CropsService {
     private readonly agricultorRepository: Repository<Agricultor>,
     @InjectRepository(AsignacionTecnico)
     private readonly asignacionRepository: Repository<AsignacionTecnico>,
+    @InjectRepository(Prediccion)
+    private readonly prediccionRepository: Repository<Prediccion>,
+    @InjectRepository(Recomendacion)
+    private readonly recomendacionRepository: Repository<Recomendacion>,
+    @InjectRepository(Actividad)
+    private readonly actividadRepository: Repository<Actividad>,
+    
   ) {}
 
   // ── Listar todos los tipos de cultivo ──
@@ -346,22 +356,39 @@ export class CropsService {
   }
 
   // ── Eliminar cultivo ──
-  async removeCultivoParcela(
-    cultivoId: string,
-    usuarioId: string,
-    rol: Rol,
-  ): Promise<void> {
+  async removeCultivoParcela(id: string, usuarioId: string, rol: string): Promise<void> {
     const cultivo = await this.cultivoParcelaRepository.findOne({
-      where: { cultivo_parcela_id: cultivoId },
-      relations: ['parcela'],
+        where: { cultivo_parcela_id: id },
+        relations: ['parcela', 'parcela.agricultor'],
     });
+
     if (!cultivo) throw new NotFoundException('Cultivo no encontrado');
 
-    await this.verificarAccesoPropietario(cultivo.parcela, usuarioId, rol);
+    if (rol === Rol.AGRICULTOR && cultivo.parcela?.agricultor?.usuario_id !== usuarioId) {
+        throw new ForbiddenException('No tienes permiso para eliminar este cultivo');
+    }
 
+    // Obtener predicciones del cultivo
+    const predicciones = await this.prediccionRepository.find({
+        where: { cultivo_parcela_id: id },
+        select: ['prediccion_id'],
+    });
+
+        // Eliminar actividades asociadas al cultivo
+    await this.actividadRepository.delete({ cultivo_parcela_id: id });
+
+    // Eliminar recomendaciones de cada predicción
+    for (const prediccion of predicciones) {
+        await this.recomendacionRepository.delete({ prediccion_id: prediccion.prediccion_id });
+    }
+
+    // Eliminar predicciones
+    await this.prediccionRepository.delete({ cultivo_parcela_id: id });
+
+    // Eliminar cultivo
     await this.cultivoParcelaRepository.remove(cultivo);
-  }
 
+  }
   // ══════════════════════════════════════════
   // HELPERS DE ACCESO
   // ══════════════════════════════════════════
