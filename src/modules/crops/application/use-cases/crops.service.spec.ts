@@ -9,6 +9,9 @@ import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { Agricultor } from '@modules/farmers/domain/entities/agricultor.entity';
 import { AsignacionTecnico } from '@modules/farmers/domain/entities/asignacion-tecnico.entity';
 import { Rol } from '@common/enums/enums';
+import { Prediccion } from '@modules/predictions/domain/entities/prediccion.entity';
+import { Recomendacion } from '@modules/recommendations/domain/entities/recomendacion.entity';
+import { Actividad } from '@modules/activities/domain/entities/actividad.entity';
 
 const mockTipoCultivo = {
   tipo_cultivo_id: 'uuid-tipo-1',
@@ -49,6 +52,19 @@ const mockCultivoRepo = {
   }),
 };
 
+const mockPrediccionRepo = {
+    find: jest.fn().mockResolvedValue([]),
+    delete: jest.fn().mockResolvedValue({}),
+};
+
+const mockRecomendacionRepo = {
+    delete: jest.fn().mockResolvedValue({}),
+};
+
+const mockActividadRepo = {
+    delete: jest.fn().mockResolvedValue({}),
+};
+
 const mockParcelaRepo = { findOne: jest.fn() };
 const mockAgriRepo = { findOne: jest.fn() };
 const mockAsignacionRepo = { find: jest.fn(), findOne: jest.fn() };
@@ -65,6 +81,9 @@ describe('CropsService', () => {
         { provide: getRepositoryToken(Parcela), useValue: mockParcelaRepo },
         { provide: getRepositoryToken(Agricultor), useValue: mockAgriRepo },
         { provide: getRepositoryToken(AsignacionTecnico), useValue: mockAsignacionRepo },
+        { provide: getRepositoryToken(Prediccion), useValue: mockPrediccionRepo },
+        { provide: getRepositoryToken(Recomendacion), useValue: mockRecomendacionRepo },
+        { provide: getRepositoryToken(Actividad), useValue: mockActividadRepo },
       ],
     }).compile();
 
