@@ -59,6 +59,12 @@ export class Prediccion {
   @Column({ type: 'jsonb', nullable: true })
   importancia_features: object;
 
+  @Column({ type: 'timestamp', nullable: true })
+  fecha_cosecha_estimada: Date;
+
+  @Column({ type: 'integer', nullable: true })
+  dias_para_cosecha: number;
+
   @Column({ type: 'timestamp' })
   fecha_prediccion: Date;
 

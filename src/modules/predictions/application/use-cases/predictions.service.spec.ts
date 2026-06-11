@@ -8,6 +8,10 @@ import { RecommendationsService } from '@modules/recommendations/application/use
 import { Prediccion } from '@modules/predictions/domain/entities/prediccion.entity';
 import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { Rol } from '@common/enums/enums';
+import { CultivoParcela } from '@modules/crops/domain/entities/cultivo-parcela.entity';
+import { TipoCultivo } from '@modules/crops/domain/entities/tipo-cultivo.entity';
+import { DatoClimatico } from '@modules/weather/domain/entities/dato-climatico.entity';
+import { Agricultor } from '@modules/farmers/domain/entities/agricultor.entity';
 
 const mockParcela = { parcela_id: 'uuid-parcela-1', agricultor: { usuario_id: 'uuid-user-1' } };
 const mockPrediccion = {
@@ -48,6 +52,36 @@ const mockRecommendationsService = {
   generarParaPrediccion: jest.fn().mockResolvedValue([]),
 };
 
+const mockCultivoParcelaRepo = {
+    findOne: jest.fn().mockResolvedValue(null),
+    update: jest.fn().mockResolvedValue({}),
+    createQueryBuilder: jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+    }),
+};
+
+const mockTipoCultivoRepo = {
+    findOne: jest.fn().mockResolvedValue(null),
+};
+
+const mockClimaRepo = {
+    createQueryBuilder: jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+    }),
+};
+
+const mockAgricultorRepo = {
+    findOne: jest.fn().mockResolvedValue({ municipio: 'Manizales' }),
+};
+
 describe('PredictionsService', () => {
   let service: PredictionsService;
 
@@ -59,6 +93,10 @@ describe('PredictionsService', () => {
         { provide: getRepositoryToken(Parcela), useValue: mockParcelaRepo },
         { provide: MlService, useValue: mockMlService },
         { provide: RecommendationsService, useValue: mockRecommendationsService },
+        { provide: getRepositoryToken(CultivoParcela), useValue: mockCultivoParcelaRepo },
+        { provide: getRepositoryToken(TipoCultivo), useValue: mockTipoCultivoRepo },
+        { provide: getRepositoryToken(DatoClimatico), useValue: mockClimaRepo },
+        { provide: getRepositoryToken(Agricultor), useValue: mockAgricultorRepo },
       ],
     }).compile();
 
