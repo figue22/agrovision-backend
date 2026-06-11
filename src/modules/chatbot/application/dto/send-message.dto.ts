@@ -1,9 +1,10 @@
-import { IsString, IsOptional, IsUUID } from 'class-validator';
+import { IsString, IsOptional, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class SendMessageDto {
-    @ApiProperty({ example: '¿Cómo fertilizar el café?' })
+    @ApiProperty({ example: '¿Cuándo debo fertilizar mi cultivo de plátano?' })
     @IsString()
+    @MaxLength(2000)
     mensaje: string;
 
     @ApiPropertyOptional()
@@ -11,7 +12,7 @@ export class SendMessageDto {
     @IsString()
     conversacion_id?: string;
 
-    @ApiPropertyOptional({ example: 'cafe' })
+    @ApiPropertyOptional({ example: 'platano' })
     @IsOptional()
     @IsString()
     cultivo?: string;
@@ -20,9 +21,4 @@ export class SendMessageDto {
     @IsOptional()
     @IsString()
     region?: string;
-
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsUUID()
-    parcela_id?: string;
 }

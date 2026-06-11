@@ -55,7 +55,7 @@ export class WhatsappController {
     @ApiOperation({ summary: 'Historial conversación de un número' })
     async getHistorial(@Param('waId') waId: string) {
         const convId = `wa_${waId}`;
-        return this.chatbotService.getHistorialPublico(convId);
+        return this.chatbotService.getHistorial(convId);
     }
 
     @Post('enviar/:waId')
