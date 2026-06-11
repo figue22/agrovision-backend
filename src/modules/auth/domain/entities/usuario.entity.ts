@@ -52,6 +52,12 @@ export class Usuario {
   @Column({ type: 'boolean', default: true })
   esta_activo: boolean;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  reset_password_token: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  reset_password_expires: Date | null;
+
   @Column({ type: 'timestamp', nullable: true })
   ultimo_login: Date;
 

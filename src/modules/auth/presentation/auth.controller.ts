@@ -25,6 +25,8 @@ import {
   Verify2faDto,
   Login2faDto,
   Enable2faResponseDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
 } from '@modules/auth/application/dto';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -127,6 +129,23 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Estado del 2FA' })
   async get2faStatus(@CurrentUser() usuario: Usuario) {
     return this.twoFactorService.getStatus(usuario.usuario_id);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Solicitar enlace de recuperación de contraseña' })
+  @ApiResponse({ status: 200, description: 'Correo enviado si el email existe' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto.correo);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Restablecer contraseña con token' })
+  @ApiResponse({ status: 200, description: 'Contraseña actualizada' })
+  @ApiResponse({ status: 400, description: 'Token inválido o expirado' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.token, dto.nueva_contrasena);
   }
 
   @Post('2fa/regenerate-backup')
