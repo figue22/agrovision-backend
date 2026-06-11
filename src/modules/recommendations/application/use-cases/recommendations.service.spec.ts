@@ -7,6 +7,7 @@ import { Recomendacion } from '@modules/recommendations/domain/entities/recomend
 import { Prediccion } from '@modules/predictions/domain/entities/prediccion.entity';
 import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { CatTipoRecomendacion } from '@modules/catalogs/domain/entities/cat-tipo-recomendacion.entity';
+import { Actividad } from '@modules/activities/domain/entities/actividad.entity';
 import { Rol } from '@common/enums/enums';
 
 const mockPrediccion = {
@@ -56,6 +57,11 @@ const mockTipoRecomRepo = {
     { id: 6, codigo: 'general', nombre: 'General' },
   ]),
 };
+const mockActividadRepo = {
+  find: jest.fn().mockResolvedValue([]),
+  findOne: jest.fn().mockResolvedValue(null),
+  delete: jest.fn().mockResolvedValue({}),
+};
 
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
@@ -68,6 +74,7 @@ describe('RecommendationsService', () => {
         { provide: getRepositoryToken(Prediccion), useValue: mockPredRepo },
         { provide: getRepositoryToken(Parcela), useValue: mockParcelaRepo },
         { provide: getRepositoryToken(CatTipoRecomendacion), useValue: mockTipoRecomRepo },
+        { provide: getRepositoryToken(Actividad), useValue: mockActividadRepo },
       ],
     }).compile();
 
