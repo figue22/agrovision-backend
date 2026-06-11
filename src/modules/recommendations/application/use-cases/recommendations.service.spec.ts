@@ -19,20 +19,6 @@ const mockPrediccion = {
   datos_clima_usados: {},
 };
 
-const mockActividadRepo = {
-    find: jest.fn().mockResolvedValue([]),
-    findOne: jest.fn().mockResolvedValue(null),
-    delete: jest.fn().mockResolvedValue({}),
-    createQueryBuilder: jest.fn().mockReturnValue({
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([]),
-    }),
-};
-
 const mockParcela = { parcela_id: 'uuid-parcela-1', agricultor: { usuario_id: 'uuid-user-1' } };
 const mockRec = {
   recomendacion_id: 'uuid-rec-1',
