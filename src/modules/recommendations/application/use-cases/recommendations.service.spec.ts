@@ -7,6 +7,7 @@ import { Recomendacion } from '@modules/recommendations/domain/entities/recomend
 import { Prediccion } from '@modules/predictions/domain/entities/prediccion.entity';
 import { Parcela } from '@modules/parcels/domain/entities/parcela.entity';
 import { CatTipoRecomendacion } from '@modules/catalogs/domain/entities/cat-tipo-recomendacion.entity';
+import { Actividad } from '@modules/activities/domain/entities/actividad.entity';
 import { Rol } from '@common/enums/enums';
 
 const mockPrediccion = {
@@ -17,6 +18,7 @@ const mockPrediccion = {
   factores_riesgo: {},
   datos_clima_usados: {},
 };
+
 const mockParcela = { parcela_id: 'uuid-parcela-1', agricultor: { usuario_id: 'uuid-user-1' } };
 const mockRec = {
   recomendacion_id: 'uuid-rec-1',
@@ -40,7 +42,14 @@ const mockRecRepo = {
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
     getMany: jest.fn().mockResolvedValue([]),
+    getCount: jest.fn().mockResolvedValue(0),
+    getRawMany: jest.fn().mockResolvedValue([]),
+    getRawOne: jest.fn().mockResolvedValue(null),
   }),
 };
 
@@ -57,6 +66,28 @@ const mockTipoRecomRepo = {
   ]),
 };
 
+const mockActividadRepo = {
+  find: jest.fn().mockResolvedValue([]),
+  findOne: jest.fn().mockResolvedValue(null),
+  delete: jest.fn().mockResolvedValue({}),
+  createQueryBuilder: jest.fn().mockReturnValue({
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    innerJoin: jest.fn().mockReturnThis(),
+    innerJoinAndSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
+    getCount: jest.fn().mockResolvedValue(0),
+    getRawMany: jest.fn().mockResolvedValue([]),
+    getRawOne: jest.fn().mockResolvedValue(null),
+  }),
+};
+
 describe('RecommendationsService', () => {
   let service: RecommendationsService;
 
@@ -68,6 +99,7 @@ describe('RecommendationsService', () => {
         { provide: getRepositoryToken(Prediccion), useValue: mockPredRepo },
         { provide: getRepositoryToken(Parcela), useValue: mockParcelaRepo },
         { provide: getRepositoryToken(CatTipoRecomendacion), useValue: mockTipoRecomRepo },
+        { provide: getRepositoryToken(Actividad), useValue: mockActividadRepo },
       ],
     }).compile();
 
