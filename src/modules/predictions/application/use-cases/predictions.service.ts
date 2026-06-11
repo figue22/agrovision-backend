@@ -92,7 +92,8 @@ export class PredictionsService {
 
         let tempProm = 24, tempMax = 29, tempMin = 19;
         let precipAcum = 300, humedadProm = 75;
-        let vientoProm = 2.0, radProm = 4.5;
+        let vientoProm = 2.0 
+        const radProm = 4.5;
         let diasSinLluvia = 5;
 
         if (datosClima.length > 0) {
