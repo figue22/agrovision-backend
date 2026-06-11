@@ -60,7 +60,7 @@ describe('ChatbotService', () => {
 
   describe('getHistorialPublico', () => {
     it('debe retornar vacío para conversación inexistente', async () => {
-      const result = await service.getHistorialPublico('uuid-no-existe');
+      const result = await service.getHistorial('uuid-no-existe');
       expect(result).toHaveLength(0);
     });
   });

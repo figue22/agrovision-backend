@@ -58,10 +58,19 @@ const mockTipoRecomRepo = {
     { id: 6, codigo: 'general', nombre: 'General' },
   ]),
 };
+
 const mockActividadRepo = {
-  find: jest.fn().mockResolvedValue([]),
-  findOne: jest.fn().mockResolvedValue(null),
-  delete: jest.fn().mockResolvedValue({}),
+    find: jest.fn().mockResolvedValue([]),
+    findOne: jest.fn().mockResolvedValue(null),
+    delete: jest.fn().mockResolvedValue({}),
+    createQueryBuilder: jest.fn().mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+    }),
 };
 
 describe('RecommendationsService', () => {
