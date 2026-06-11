@@ -7,3 +7,5 @@ export {
   Verify2faDto,
   Login2faDto,
 } from './two-factor.dto';
+
+export { ForgotPasswordDto, ResetPasswordDto } from './forgot-password.dto';
