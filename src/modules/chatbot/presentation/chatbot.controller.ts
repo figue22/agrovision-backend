@@ -21,25 +21,24 @@ export class ChatbotController {
   @ApiOperation({ summary: 'Enviar mensaje al chatbot agrícola' })
   @ApiResponse({ status: 201, description: 'Respuesta del chatbot' })
   async sendMessage(
-    @CurrentUser() usuario: Usuario,
-    @Body() dto: SendMessageDto,
+      @CurrentUser() usuario: Usuario,
+      @Body() dto: SendMessageDto,
   ) {
-    return this.chatbotService.sendMessage(
-      usuario.usuario_id,
-      dto.mensaje,
-      dto.conversacion_id,
-      {
-        cultivo: dto.cultivo,
-        region: dto.region,
-        nombreUsuario: `${usuario.nombre} ${usuario.apellido}`,
-      },
-    );
+      return this.chatbotService.sendMessage(
+          usuario.usuario_id,
+          dto.mensaje,
+          dto.conversacion_id,
+          {
+              cultivo: dto.cultivo,
+              region: dto.region,
+          },
+      );
   }
 
   @Get('historial/:conversacionId')
   @ApiOperation({ summary: 'Obtener historial de conversación' })
   async getHistorial(@Param('conversacionId') conversacionId: string) {
-    return this.chatbotService.getHistorialPublico(conversacionId);
+    return this.chatbotService.getHistorial(conversacionId);
   }
 
   @Delete('conversacion/:conversacionId')
