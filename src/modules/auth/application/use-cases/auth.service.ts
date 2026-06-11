@@ -4,12 +4,14 @@ import {
   UnauthorizedException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
+import * as crypto from 'crypto';
 
 import { Usuario } from '@modules/auth/domain/entities/usuario.entity';
 import { Agricultor } from '@modules/farmers/domain/entities/agricultor.entity';
@@ -273,6 +275,87 @@ export class AuthService {
     }
 
     return usuario;
+  }
+
+  async forgotPassword(correo: string): Promise<{
+    mensaje: string;
+    dev_reset_url?: string;
+    dev_token?: string;
+    dev_expira?: string;
+  }> {
+    const logger = new Logger('AuthService');
+    // Respuesta genérica siempre, para no revelar si el correo existe
+    const mensajeGenerico = 'Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.';
+
+    const usuario = await this.usuarioRepository.findOne({
+      where: { correo: correo.toLowerCase().trim() },
+    });
+
+    if (!usuario || !usuario.esta_activo) {
+      return { mensaje: mensajeGenerico };
+    }
+
+    // Generar token seguro de 32 bytes
+    const token = crypto.randomBytes(32).toString('hex');
+    const expira = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
+
+    usuario.reset_password_token = token;
+    usuario.reset_password_expires = expira;
+    await this.usuarioRepository.save(usuario);
+
+    const appUrl = this.configService.get<string>('APP_URL', 'http://localhost:3000');
+    const resetUrl = `${appUrl}/auth/reset-password?token=${token}`;
+    const isDev = this.configService.get<string>('NODE_ENV', 'development') === 'development';
+
+    logger.log(`[RESET PASSWORD] Usuario: ${correo} | Enlace: ${resetUrl} | Expira: ${expira.toISOString()}`);
+
+    // En desarrollo: devolver el enlace directamente en la respuesta
+    // En producción: reemplazar por envío de email real (Nodemailer / SendGrid)
+    if (isDev) {
+      return {
+        mensaje: mensajeGenerico,
+        dev_reset_url: resetUrl,
+        dev_token: token,
+        dev_expira: expira.toISOString(),
+      };
+    }
+
+    return { mensaje: mensajeGenerico };
+  }
+
+  async resetPassword(token: string, nuevaContrasena: string): Promise<{ mensaje: string }> {
+    const usuario = await this.usuarioRepository.findOne({
+      where: { reset_password_token: token },
+    });
+
+    if (!usuario) {
+      throw new BadRequestException('Token inválido o ya utilizado');
+    }
+
+    if (!usuario.reset_password_expires || usuario.reset_password_expires < new Date()) {
+      usuario.reset_password_token = null;
+      usuario.reset_password_expires = null;
+      await this.usuarioRepository.save(usuario);
+      throw new BadRequestException('El enlace de recuperación ha expirado. Solicita uno nuevo.');
+    }
+
+    if (!usuario.esta_activo) {
+      throw new ForbiddenException('La cuenta está deshabilitada');
+    }
+
+    const contrasenaHash = await argon2.hash(nuevaContrasena, {
+      type: argon2.argon2id,
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+    });
+
+    usuario.contrasena_hash = contrasenaHash;
+    usuario.reset_password_token = null;
+    usuario.reset_password_expires = null;
+    await this.usuarioRepository.save(usuario);
+
+    return { mensaje: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' };
   }
 
   private async generateTokens(
