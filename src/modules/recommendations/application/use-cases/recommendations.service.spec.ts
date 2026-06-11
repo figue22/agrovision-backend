@@ -42,7 +42,14 @@ const mockRecRepo = {
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
     getMany: jest.fn().mockResolvedValue([]),
+    getCount: jest.fn().mockResolvedValue(0),
+    getRawMany: jest.fn().mockResolvedValue([]),
+    getRawOne: jest.fn().mockResolvedValue(null),
   }),
 };
 
@@ -60,17 +67,25 @@ const mockTipoRecomRepo = {
 };
 
 const mockActividadRepo = {
-    find: jest.fn().mockResolvedValue([]),
-    findOne: jest.fn().mockResolvedValue(null),
-    delete: jest.fn().mockResolvedValue({}),
-    createQueryBuilder: jest.fn().mockReturnValue({
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([]),
-    }),
+  find: jest.fn().mockResolvedValue([]),
+  findOne: jest.fn().mockResolvedValue(null),
+  delete: jest.fn().mockResolvedValue({}),
+  createQueryBuilder: jest.fn().mockReturnValue({
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    innerJoin: jest.fn().mockReturnThis(),
+    innerJoinAndSelect: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    addSelect: jest.fn().mockReturnThis(),
+    groupBy: jest.fn().mockReturnThis(),
+    getMany: jest.fn().mockResolvedValue([]),
+    getCount: jest.fn().mockResolvedValue(0),
+    getRawMany: jest.fn().mockResolvedValue([]),
+    getRawOne: jest.fn().mockResolvedValue(null),
+  }),
 };
 
 describe('RecommendationsService', () => {
